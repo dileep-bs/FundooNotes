@@ -1,9 +1,18 @@
 import json
 import logging
+from datetime import timedelta
+
+import requests
 from django.contrib.auth.models import User
+from django.contrib.sites.shortcuts import get_current_site
+from django.core import paginator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
+from django.shortcuts import render
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+# from pymitter import EventEmitter
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
@@ -21,6 +30,7 @@ from .lib.s3_file import UploadImage
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(file_handler)
+# ee=EventEmitter()
 
 
 class UploadMedia(GenericAPIView):
@@ -28,6 +38,7 @@ class UploadMedia(GenericAPIView):
 
     def post(self, request):
         """Upload media files to s3 bucket object"""
+
         try:
             image = request.FILES.get('file')  # key
             print(image, "image")
@@ -49,22 +60,36 @@ class NoteCreate(GenericAPIView):
     def get(self, request):
         """Getting all the notes present in user database"""
         response = {'success': False, 'message': 'no notes', 'data': []}
+        notes_list = Notes.objects.all()
+        page = request.GET.get('page')
+        paginator = Paginator(notes_list, 1)
+        user = request.user
         try:
-            user = request.user
-            redis_data = red.hvals(str(user.id) + "label")
-            print(redis_data, 'redis datagklsfjgvkljsn')
-            if len(redis_data) == 0:
-                notes = Notes.objects.filter(user_id=user.id)
-                Note_name = [i.note for i in notes]
-                # print(labels,label_name,'hfgjnxcgnfnhfgnfh')
-                logger.info("labels where taken from db for user")
-                return Response(Note_name, status=200)
-            logger.info("got notes ")
-            return Response(redis_data, status=200)
-        except Exception as e:
-            logger.info("happen something while rendering notes")
-            response = {'success': False, 'message': "bad response", 'data': []}
-            return Response(response, status=400)
+            notes = paginator.page(page)
+        except PageNotAnInteger:
+            logger.warning("got %s error for getting note for user %s", str(PageNotAnInteger), user.username)
+            notes = paginator.page(1)
+        except EmptyPage:
+            logger.warning("got %s error for getting note for user %s", EmptyPage, user)
+            notes = paginator.page(paginator.num_pages)
+        logger.info("all the notes are rendered to html page for user %s", user)
+        return render(request, 'listofnotes.html', {'notes': notes}, status=200)
+
+        #     user = request.user
+        #     redis_data = red.hvals(str(user.id) + "label")
+        #     print(redis_data, 'redis datagklsfjgvkljsn')
+        #     if len(redis_data) == 0:
+        #         notes = Notes.objects.filter(user_id=user.id)
+        #         Note_name = [i.note for i in notes]
+        #         # print(labels,label_name,'hfgjnxcgnfnhfgnfh')
+        #         logger.info("labels where taken from db for user")
+        #         return Response(Note_name, status=200)
+        #     logger.info("got notes ")
+        #     return render(request, 'listofnotes.html', {'notes': notes}, status=200)
+        # except Exception as e:
+        #     logger.info("happen something while rendering notes")
+        #     response = {'success': False, 'message': "bad response", 'data': []}
+        #     return Response(response, status=400)
 
 
     def post(request):
@@ -361,3 +386,21 @@ class Remider(GenericAPIView):
             self.response['message']='exception came'
             # logger.info("Reminder successfull")
             return HttpResponse(json.dumps(self.response))
+
+class Celery(GenericAPIView):
+    serializer_class = NotesSerializer
+
+    def get(self, request):
+        """Reminder mail"""
+        reminder = Notes.objects.filter(reminder__isnull=False)
+        start = timezone.now()
+        end = timezone.now() + timedelta(minutes=1)
+        for i in range(len(reminder)):
+            if start < reminder.values()[i]["reminder"] < end:
+                user_id = reminder.values()[i]['user_id']
+                user = User.objects.get(id=user_id)
+                mail_message = render_to_string('mail_reminder.html', { 'user': user,  'domain': get_current_site(request).domain, 'note_id': reminder.values()[i]["user_id"]             })
+                # ee.emit(user.email, mail_message)
+                logger.info("email sent %s ", request.user)
+        return HttpResponse(reminder)
+

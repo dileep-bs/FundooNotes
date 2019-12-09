@@ -206,3 +206,14 @@ formatter = logging.Formatter('%(levelname)s :%(asctime)s :%(pathname)s :%(linen
                               'process)d :%(message)s')
 file_handler = logging.FileHandler('fundoonotes.log')
 file_handler.setFormatter(formatter)
+CELERY_BROKER_URL = 'amqp://localhost'
+CELERY_HIT_POINT = os.getenv("CELERY_HIT_POINT")
+CRON_CLASSES = [
+    "fundoonotes.cron.newCrone",
+]
+DJANGO_CRON_LOCK_BACKEND = "django_cron.backends.lock.cache.CacheLock"
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_RESULT_BACKEND = 'rpc://'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
