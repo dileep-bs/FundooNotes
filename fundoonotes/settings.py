@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_beat',
     "storages",
 
 ]
@@ -217,3 +218,4 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_RESULT_BACKEND = 'rpc://'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+CELERY_TIMEZONE = TIME_ZONE

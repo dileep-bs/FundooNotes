@@ -6,6 +6,7 @@ import requests
 from django.contrib.auth.models import User
 from django.contrib.sites.shortcuts import get_current_site
 from django.core import paginator
+from django.core.mail import EmailMessage
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
 from django.shortcuts import render
@@ -389,9 +390,10 @@ class Remider(GenericAPIView):
 
 class Celery(GenericAPIView):
     serializer_class = NotesSerializer
-
+    print("ighkfrbhkabgfjkjabgsfkjb")
     def get(self, request):
         """Reminder mail"""
+        print("ighkfrbhkabgfjkjabgsfkjb")
         reminder = Notes.objects.filter(reminder__isnull=False)
         start = timezone.now()
         end = timezone.now() + timedelta(minutes=1)
@@ -399,8 +401,12 @@ class Celery(GenericAPIView):
             if start < reminder.values()[i]["reminder"] < end:
                 user_id = reminder.values()[i]['user_id']
                 user = User.objects.get(id=user_id)
+                mail_subject="reminder"
                 mail_message = render_to_string('mail_reminder.html', { 'user': user,  'domain': get_current_site(request).domain, 'note_id': reminder.values()[i]["user_id"]             })
-                # ee.emit(user.email, mail_message)
+                recipient_email = ['dileep.bs@yahoo.com']
+                email = EmailMessage(mail_subject, mail_message, to=[recipient_email])
+                email.send()
+                print("ighkfrbhkabgfjkjabgsfkjb")
                 logger.info("email sent %s ", request.user)
         return HttpResponse(reminder)
 
