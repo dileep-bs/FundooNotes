@@ -3,6 +3,7 @@ import logging
 from datetime import timedelta
 
 import requests
+# import send_email
 from django.contrib.auth.models import User
 from django.contrib.sites.shortcuts import get_current_site
 from django.core import paginator
@@ -388,25 +389,37 @@ class Remider(GenericAPIView):
             # logger.info("Reminder successfull")
             return HttpResponse(json.dumps(self.response))
 
+# class Celery(GenericAPIView):
+#     serializer_class = NotesSerializer
+#     print("ighkfrbhkabgfjkjabgsfkjb")
+#     def get(self, request):
+#         """Reminder mail"""
+#         print("ighkfrbhkabgfjkjabgsfkjb")
+#         reminder = Notes.objects.filter(reminder__isnull=False)
+#         start = timezone.now()
+#         end = timezone.now() + timedelta(minutes=1)
+#         for i in range(len(reminder)):
+#             if start < reminder.values()[i]["reminder"] < end:
+#                 user_id = reminder.values()[i]['user_id']
+#                 user = User.objects.get(id=user_id)
+#                 mail_subject="reminder"
+#                 mail_message = render_to_string('mail_reminder.html', { 'user': user,  'domain': get_current_site(request).domain, 'note_id': reminder.values()[i]["user_id"]             })
+#                 recipient_email = ['dileep.bs@yahoo.com']
+#                 email = EmailMessage(mail_subject, mail_message, to=[recipient_email])
+#                 email.send()
+#                 print("ighkfrbhkabgfjkjabgsfkjb")
+#                 logger.info("email sent %s ", request.user)
+#         return HttpResponse(reminder)\
+
 class Celery(GenericAPIView):
     serializer_class = NotesSerializer
     print("ighkfrbhkabgfjkjabgsfkjb")
+
     def get(self, request):
-        """Reminder mail"""
-        print("ighkfrbhkabgfjkjabgsfkjb")
-        reminder = Notes.objects.filter(reminder__isnull=False)
-        start = timezone.now()
-        end = timezone.now() + timedelta(minutes=1)
-        for i in range(len(reminder)):
-            if start < reminder.values()[i]["reminder"] < end:
-                user_id = reminder.values()[i]['user_id']
-                user = User.objects.get(id=user_id)
-                mail_subject="reminder"
-                mail_message = render_to_string('mail_reminder.html', { 'user': user,  'domain': get_current_site(request).domain, 'note_id': reminder.values()[i]["user_id"]             })
-                recipient_email = ['dileep.bs@yahoo.com']
-                email = EmailMessage(mail_subject, mail_message, to=[recipient_email])
-                email.send()
-                print("ighkfrbhkabgfjkjabgsfkjb")
-                logger.info("email sent %s ", request.user)
-        return HttpResponse(reminder)
+        print("sending for Queue")
+        # send_email.delay(request.user.email,"Email sent : ")
+        print("sent for Queue")
+
+
+
 

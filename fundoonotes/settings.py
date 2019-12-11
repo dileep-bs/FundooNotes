@@ -85,7 +85,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'social_django.context_processors.backends',  # this
+                'social_django.context_processors.backends',
                 'social_django.context_processors.login_redirect',
             ],
         },
@@ -208,7 +208,7 @@ formatter = logging.Formatter('%(levelname)s :%(asctime)s :%(pathname)s :%(linen
 file_handler = logging.FileHandler('fundoonotes.log')
 file_handler.setFormatter(formatter)
 CELERY_BROKER_URL = 'amqp://localhost'
-CELERY_HIT_POINT = os.getenv("CELERY_HIT_POINT")
+# CELERY_HIT_POINT = os.getenv("CELERY_HIT_POINT")
 CRON_CLASSES = [
     "fundoonotes.cron.newCrone",
 ]
