@@ -9,7 +9,7 @@ from notes.models import Label
 from notes.lib.redis import RedisOperation
 
 redisobject=RedisOperation()
-red=redisobject.r
+red=redisobject.red
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

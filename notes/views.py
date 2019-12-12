@@ -1,25 +1,17 @@
 import json
 import logging
 from datetime import timedelta
-
-import requests
-# import send_email
 from django.contrib.auth.models import User
-from django.contrib.sites.shortcuts import get_current_site
-from django.core import paginator
-from django.core.mail import EmailMessage
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
 from django.shortcuts import render
-from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-# from pymitter import EventEmitter
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
 from notes.serializer import UploadSerializer
-from notes.decorators import login_decorator
+# from notes.decorators import login_decorator
 from notes.models import Notes
 from notes.serializer import NotesSerializer
 from fundoonotes.settings import file_handler
@@ -27,12 +19,16 @@ from notes.decorators import red
 from notes.models import Label
 from notes.serializer import LabelSerializer
 from notes.serializer import UpdateSerializer
+
+from .decorators import login_decorator
 from .lib.s3_file import UploadImage
+from django.core import mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(file_handler)
-# ee=EventEmitter()
 
 
 class UploadMedia(GenericAPIView):
@@ -92,7 +88,6 @@ class NoteCreate(GenericAPIView):
         #     logger.info("happen something while rendering notes")
         #     response = {'success': False, 'message': "bad response", 'data': []}
         #     return Response(response, status=400)
-
 
     def post(request):
         """creating and posting all the notes present in user database"""
@@ -335,7 +330,6 @@ class Archive(GenericAPIView):
             return HttpResponse(json.dumps(response), status=404)
 
 
-
 class Trash(GenericAPIView):
     def get(self, request):
         """Getting all the Deleted notes present in user database"""
@@ -359,8 +353,9 @@ class Trash(GenericAPIView):
             logger.error("error:%e for %s while fetching trashed notes", user, str(e))
             HttpResponse(json.dumps(response, status=404))
 
+
 class Remider(GenericAPIView):
-    def get(self,request):
+    def get(self, request):
         """Getting all the Redminded notes present in user database"""
         response = {"success": False, "message": "bad response", "data": []}
         try:
@@ -368,8 +363,8 @@ class Remider(GenericAPIView):
             print(user)
             user_id = user.id
             note_obj = Notes.objects.filter(user_id=user_id)
-            reminderlist=[]
-            completedlist=[]
+            reminderlist = []
+            completedlist = []
             for i in range(len(note_obj.values())):
                 if note_obj.values()[i]['reminder'] is None:
                     continue
@@ -377,49 +372,43 @@ class Remider(GenericAPIView):
                     completedlist.append(note_obj.values()[i])
                 else:
                     reminderlist.append(note_obj.values()[i])
-            remid={
-                'reminder':reminderlist,
-                'compl':completedlist
+            remid = {
+                'reminder': reminderlist,
+                'compl': completedlist
             }
-            remdstr=str(remid)
+            remdstr = str(remid)
             logger.info("Reminders data is loaded for %s", user)
             return HttpResponse(note_obj.values(), status=200)
         except Notes.DoesNotExist:
-            self.response['message']='exception came'
-            # logger.info("Reminder successfull")
+            self.response['message'] = 'exception came'
+            logger.info("Reminder unsuccessfull")
             return HttpResponse(json.dumps(self.response))
 
-# class Celery(GenericAPIView):
-#     serializer_class = NotesSerializer
-#     print("ighkfrbhkabgfjkjabgsfkjb")
-#     def get(self, request):
-#         """Reminder mail"""
-#         print("ighkfrbhkabgfjkjabgsfkjb")
-#         reminder = Notes.objects.filter(reminder__isnull=False)
-#         start = timezone.now()
-#         end = timezone.now() + timedelta(minutes=1)
-#         for i in range(len(reminder)):
-#             if start < reminder.values()[i]["reminder"] < end:
-#                 user_id = reminder.values()[i]['user_id']
-#                 user = User.objects.get(id=user_id)
-#                 mail_subject="reminder"
-#                 mail_message = render_to_string('mail_reminder.html', { 'user': user,  'domain': get_current_site(request).domain, 'note_id': reminder.values()[i]["user_id"]             })
-#                 recipient_email = ['dileep.bs@yahoo.com']
-#                 email = EmailMessage(mail_subject, mail_message, to=[recipient_email])
-#                 email.send()
-#                 print("ighkfrbhkabgfjkjabgsfkjb")
-#                 logger.info("email sent %s ", request.user)
-#         return HttpResponse(reminder)\
 
 class Celery(GenericAPIView):
     serializer_class = NotesSerializer
-    print("ighkfrbhkabgfjkjabgsfkjb")
 
     def get(self, request):
-        print("sending for Queue")
-        # send_email.delay(request.user.email,"Email sent : ")
-        print("sent for Queue")
+        """Reminder Email"""
+        response = {"success": False, "message": "bad response", "data": []}
 
-
-
-
+        reminder = Notes.objects.filter(reminder__isnull=False)
+        start = timezone.now()
+        end = timezone.now() + timedelta(minutes=1)
+        try:
+            for i in range(len(reminder)):
+                if start < reminder.values()[i]["reminder"] < end:
+                    user_id = reminder.values()[i]['user_id']
+                    user = User.objects.get(id=user_id)
+                    subject = 'Reminder Note'
+                    html_message = render_to_string('mailfrom.html', {'context': 'values'})
+                    plain_message = strip_tags(html_message)
+                    from_email = 'krndileep@gmail.com'
+                    to = 'dileep.bs@yahoo.com'
+                    mail.send_mail(subject, plain_message, from_email, [to], html_message=html_message)
+                    response = {"success": True, "message": "mail successfully sent!.........", "data": []}
+                    logger.info("email sent %s ", request.user)
+            return HttpResponse('successs')
+        except Exception as e:
+            logger.info("exception %s" ,str(e))
+            return HttpResponse(json.dumps(self.response))

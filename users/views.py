@@ -13,10 +13,13 @@ from django_short_url.models import ShortURL
 from django_short_url.models import ShortURL
 from django_short_url.views import get_surl
 from rest_framework.generics import GenericAPIView
+
 from .serialized import LoginSerializer, ResetSerializer, UserSerializer, ForgotSerializer
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+# from fundoonotes.celery import debug_task
+# from fundoonotes.fundoonotes.
 def index(request):
     return render(request, 'index.html')
 
@@ -32,6 +35,7 @@ class login(GenericAPIView):
             smd = {'success': False, 'message': "login Failed", 'data': []}
             payload = {'username': username, }
             user = auth.authenticate(username=username, password=password)
+            # debug_task.delay()
             try:
                 user = auth.authenticate(username=username, password=password)
             except ValueError as e:
@@ -247,3 +251,11 @@ class SendEmail(GenericAPIView):
             smd = {"success": False, "message": "Inavalid user or Email id", "data": []}
             return HttpResponse(json.dumps(smd), status=400)
 
+
+
+# class HelloView(APIView):
+#     permission_classes = (IsAuthenticated)
+#
+#     def get(self, request):
+#         content = {'message': 'Hello, World!'}
+#         return Response(content)

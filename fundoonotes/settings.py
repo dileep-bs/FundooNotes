@@ -38,6 +38,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'sociallogin',
+    # 'rest_framework_swagger',
     'rest_framework_swagger',
     'rest_framework',
     'users',
@@ -213,9 +214,13 @@ CRON_CLASSES = [
     "fundoonotes.cron.newCrone",
 ]
 DJANGO_CRON_LOCK_BACKEND = "django_cron.backends.lock.cache.CacheLock"
+# Celery application definition
+CELERY_BROKER_URL = 'redis://localhost:6379'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 CELERY_ACCEPT_CONTENT = ['application/json']
-CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_RESULT_BACKEND = 'rpc://'
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_SERIALIZER = 'json'
+
+# CELERY_IMPORTS = (
+#     'notes.tasks'
+# )
