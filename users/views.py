@@ -200,7 +200,7 @@ class reset_password(GenericAPIView):
         """ResetPassword for Authenticated user"""
         if request.method == 'POST':
             password = request.data['password']
-            print(username)
+            print(username,'sgfaaergdaesrfgaedgsr')
             if User.objects.filter(username=username).exists():
                 user = User.objects.get(username=username)
                 user.set_password(password)

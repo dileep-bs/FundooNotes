@@ -224,3 +224,9 @@ CELERY_TASK_SERIALIZER = 'json'
 # CELERY_IMPORTS = (
 #     'notes.tasks'
 # )
+
+ELASTICSEARCH_DSL = {
+'default': {
+'hosts': 'localhost:9200'
+},
+}
