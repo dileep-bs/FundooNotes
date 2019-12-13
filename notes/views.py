@@ -1,6 +1,8 @@
 import json
 import logging
 from datetime import timedelta
+
+from django.conf.global_settings import EMAIL_HOST_USER
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
@@ -403,7 +405,7 @@ class Celery(GenericAPIView):
                     subject = 'Reminder Note'
                     html_message = render_to_string('mailfrom.html', {'context': 'values'})
                     plain_message = strip_tags(html_message)
-                    from_email = 'krndileep@gmail.com'
+                    from_email = EMAIL_HOST_USER
                     to = 'dileep.bs@yahoo.com'
                     mail.send_mail(subject, plain_message, from_email, [to], html_message=html_message)
                     response = {"success": True, "message": "mail successfully sent!.........", "data": []}

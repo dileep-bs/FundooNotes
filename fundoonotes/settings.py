@@ -201,8 +201,8 @@ STATICFILES_DIRS = [
 # STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = 'krndileep@gmail.com'
-EMAIL_HOST_PASSWORD = '668877di'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 
 formatter = logging.Formatter('%(levelname)s :%(asctime)s :%(pathname)s :%(lineno)s :%(thread)d  :%(threadName)s :%('
                               'process)d :%(message)s')

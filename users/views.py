@@ -1,6 +1,7 @@
 import json
 import pdb
 import jwt
+from django.conf.global_settings import EMAIL_HOST_USER
 from django.contrib import messages
 from django.contrib.auth.models import User, auth
 from django.contrib.sites.shortcuts import get_current_site
@@ -76,7 +77,7 @@ class register(GenericAPIView):
             mail_message = render_to_string('activate.html',
                                             {'user': user.username, 'domain': get_current_site(request).domain,
                                              'token': short[2], })
-            recipient_email = ['krndileep@gmail.com']
+            recipient_email = [EMAIL_HOST_USER]
             email = EmailMessage(mail_subject, mail_message, to=[recipient_email])
             email.send()
             smd = {'success': False, 'message': "Check your mail for activate", 'data': [key]}
@@ -133,7 +134,7 @@ class sendmail(GenericAPIView):
                                                  'domain': get_current_site(request).domain,
                                                  'token': short[2]})
                 store=mail_message
-                send_mail(mail_subject, mail_message, 'krndileep@gmail.com', ['dileep.bs@yahoo.com'])
+                send_mail(mail_subject, mail_message, EMAIL_HOST_USER, [emailid])
                 smd = {'success': False,        'message': "check your mail for reset",             'data': [key]}
                 return HttpResponse(json.dumps(smd), status=201)
         except Exception as e:
@@ -239,7 +240,7 @@ class SendEmail(GenericAPIView):
         try:
             user = User.objects.get(email=emailid)
             if user is not None:
-                subject, from_email, to = 'Email Validation', 'duggudilee@gmail.com', emailid
+                subject, from_email, to = 'Email Validation', EMAIL_HOST_USER, emailid
                 html_content = render_to_string('Validation.html', {'user': user.username,  'domain': get_current_site(request).domain})  # render with dynamic value
                 text_content = strip_tags(html_content)
                 msg = EmailMultiAlternatives(subject, text_content, from_email, [to])
