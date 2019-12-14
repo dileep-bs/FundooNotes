@@ -11,10 +11,11 @@ class UploadSerializer(serializers.ModelSerializer):
         model = Media
         fields = ['file']
 
+
 class NotesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notes
-        fields = ['title', 'note', 'label', 'url', 'is_archive', 'collaborators', 'image', 'reminder' ]
+        fields = ['title', 'note', 'label', 'url', 'is_archive', 'collaborators', 'image', 'reminder']
 
 
 class ShareSerializer(serializers.ModelSerializer):
@@ -33,4 +34,10 @@ class UpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notes
         fields = ['title', 'note', 'label', 'url', 'is_archive', 'collaborators'
-            ,"is_copied" ,'checkbox','is_pined','is_trashed' ,'reminder']
+            , "is_copied", 'checkbox', 'is_pined', 'is_trashed', 'reminder']
+
+
+class NoteDocSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notes
+        fields = ['title']  # ,'note','label','reminder']

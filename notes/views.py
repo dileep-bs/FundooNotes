@@ -9,6 +9,8 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from elasticsearch_dsl import Q
+from requests import request
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
@@ -22,11 +24,17 @@ from notes.models import Label
 from notes.serializer import LabelSerializer
 from notes.serializer import UpdateSerializer
 
+from . import documents
 from .decorators import login_decorator
+# from .documents import DocumentFiels
+from .documents import Document
+
 from .lib.s3_file import UploadImage
 from django.core import mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+
+from .serializer import NoteDocSerializer
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -414,3 +422,34 @@ class Celery(GenericAPIView):
         except Exception as e:
             logger.info("exception %s" ,str(e))
             return HttpResponse(json.dumps(self.response))
+
+class Searchnotes(GenericAPIView):
+    serializer_class = NoteDocSerializer
+
+    def post(self, request):
+        """Elastic search for a notes,title..etc"""
+        response = {"success": False, "message": "bad req", "data": []}
+
+        try:
+            find = request.data['title']
+            res = Document.search().query({
+                "bool": {
+                    "must": [
+                        {"multi_match": {
+                            "query": find,
+                            "fields": ['title']
+                        }},
+                    ],
+                    "filter": [
+                        {"term": {"user.username": str(request.user)}}
+                    ]
+                }
+            })
+            data = NotesSerializer(res.to_queryset(), many=True)
+            return HttpResponse(json.dumps(data.data, indent=2), status=200)
+        except Exception as e:
+            print("in exception",str(e))
+            logger.error("error occurs",str(e))
+            return HttpResponse(json.dumps(response, indent=2), status=400)
+
+

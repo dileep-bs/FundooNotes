@@ -12,5 +12,5 @@ urlpatterns = [
     path("trash/", views.Trash.as_view(), name="Trash"),
     path("reminder/", views.Remider.as_view(), name='Reminder'),
     path("celery", views.Celery.as_view(), name="celery"),
-
+    path("search",views.Searchnotes.as_view(),name="search"),
 ]
