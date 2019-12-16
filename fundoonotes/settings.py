@@ -10,16 +10,14 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 import logging
-
 import os
-from dotenv import load_dotenv, find_dotenv
 from pathlib import *
+
+from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 env_path = Path(".") / '.env'
 # Build paths inside the project like this: os.path.join(BASE_DIR, .../
-
-import fundoonotes
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -38,7 +36,6 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'sociallogin',
-    # 'rest_framework_swagger',
     'rest_framework_swagger',
     'rest_framework',
     'users',
@@ -58,7 +55,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'social_django.middleware.SocialAuthExceptionMiddleware',  # <-
+    'social_django.middleware.SocialAuthExceptionMiddleware',
     # 'django.contrib.auth.middleware.SessionAuthenticationMiddleware'    ,#SessionAuthenticationMiddleware
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -95,7 +92,6 @@ TEMPLATES = [
     },
 ]
 
-# WSGI_APPLICATION = 'fundoo.wsgi.application'
 WSGI_APPLICATION = 'fundoonotes.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
@@ -167,9 +163,6 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
     # 'DEFAULT_AUTHENTICATION_CLASSES': 'rest_framework_simplejwt.authentication.JWTAuthentication',
 }
-# REST_FRAMEWORK = {
-#     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'
-# }
 
 AUTH_ENDPOINT = os.getenv('AUTH_ENDPOINT')
 AWS_S3_FILE_OVERWRITE = False
@@ -183,8 +176,6 @@ SOCIAL_AUTH_GITHUB_KEY = 'e749db2bf8cacb128fc2'
 SOCIAL_AUTH_GITHUB_SECRET = 'c8e87dcfb06a2af407ea61f3c86d0e7b5819d83e'
 TIME_ZONE = 'Asia/Kolkata'
 file_handler = logging.FileHandler('fundoonotes.log')
-# AWS_BUCKET1='neweast'
-# AWS_UPLOAD_REGION1='US East (Ohio)'
 AWS_BUCKET = os.getenv("AWS_BUCKET")
 AWS_UPLOAD_REGION = os.getenv('AWS_UPLOAD_REGION')
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
@@ -205,30 +196,24 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+MY_MAIL = os.getenv('MY_MAIL')
 
 formatter = logging.Formatter('%(levelname)s :%(asctime)s :%(pathname)s :%(lineno)s :%(thread)d  :%(threadName)s :%('
                               'process)d :%(message)s')
 file_handler = logging.FileHandler('fundoonotes.log')
 file_handler.setFormatter(formatter)
-CELERY_BROKER_URL = 'amqp://localhost'
-# CELERY_HIT_POINT = os.getenv("CELERY_HIT_POINT")
 CRON_CLASSES = [
     "fundoonotes.cron.newCrone",
 ]
 DJANGO_CRON_LOCK_BACKEND = "django_cron.backends.lock.cache.CacheLock"
 # Celery application definition
-CELERY_BROKER_URL = 'redis://localhost:6379'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
 
-# CELERY_IMPORTS = (
-#     'notes.tasks'
-# )
-
 ELASTICSEARCH_DSL = {
-'default': {
-'hosts': 'localhost:9200'
-},
+    'default': {
+        'hosts': 'localhost:9200'
+    },
 }
