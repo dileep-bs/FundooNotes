@@ -217,3 +217,5 @@ ELASTICSEARCH_DSL = {
         'hosts': 'localhost:9200'
     },
 }
+user_url=os.getenv('user_url')
+secretKey=os.getenv('secretKey')
