@@ -9,7 +9,7 @@ from notes.models import Label
 from notes.lib.redis import RedisOperation
 
 redisobject=RedisOperation()
-red=redisobject.red
+redis=redisobject.red
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -38,7 +38,7 @@ def login_decorator(function):
                     token = header.split(" ")
                     decode = jwt.decode(token[1], settings.SECRET_KEY)
                     user = User.objects.get(id=decode['user_id'])
-                    if red.get(user.username) is None:
+                    if redis.get(user.username) is None:
                         logger.error("user credential were not found in redis ")
                         response['message'] = "something went wrong please login back"
                         return HttpResponse(json.dumps(response, indent=2), status=404)

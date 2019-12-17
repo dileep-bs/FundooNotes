@@ -16,7 +16,7 @@ from notes.serializer import UploadSerializer
 from notes.models import Notes
 from notes.serializer import NotesSerializer
 from fundoonotes.settings import file_handler
-from notes.decorators import red
+from notes.decorators import redis
 from notes.models import Label
 from notes.serializer import LabelSerializer
 from notes.serializer import UpdateSerializer
@@ -42,12 +42,9 @@ class UploadMedia(GenericAPIView):
         """Upload media files to s3 bucket object"""
 
         try:
-            image = request.FILES.get('file')  # key
-            print(image, "image")
-            clsobj = UploadImage()  # creating obj for a aws cls
-            print('obj creation for UploadImage')
-            response = clsobj.upload_file(image)  # built method for upload media file
-            print('after image')
+            image = request.FILES.get('file')
+            clsobj = UploadImage()
+            response = clsobj.upload_file(image)
             return HttpResponse(json.dumps(response))
         except Exception as e:
             print(e)
@@ -56,17 +53,85 @@ class UploadMedia(GenericAPIView):
 
 
 @method_decorator(login_decorator, name='dispatch')
-class NoteCreate(GenericAPIView):
+class NoteData(GenericAPIView):
     serializer_class = NotesSerializer
 
-    def get(self, request):
-        """Getting all the notes present in user database
-        Summary:
+    def post(self,request):
+        """
+             Summary:
+                 New note will be create by the User.
+             Exception:
+                 KeyError: object
 
+             Returns:
+                 response: SMD format of note create message or with error message
+        """
+        user = request.user
+        try:
+            data = request.data
+            if len(data) == 0:
+                raise KeyError
+            user = request.user
+            collaborator_list = []  # empty coll  list is formed where data is input is converted to id
+            try:
+                # for loop is used for the getting label input and coll input ids
+                data["label"] = [Label.objects.filter(user_id=user.id, name=name).values()[0]['id'] for name in
+                                 data["label"]]
+            except KeyError:
+                logger.debug('label was not added by the user %s', user)
+                pass
+            try:
+                collaborator = data['collaborators']
+                # for loop is used for the getting label input and coll input ids
+                for email in collaborator:
+                    email_id = User.objects.filter(email=email)
+                    user_id = email_id.values()[0]['id']
+                    collaborator_list.append(user_id)
+                data['collaborators'] = collaborator_list
+                print(data['collaborators'])
+            except KeyError:
+                logger.debug('collaborator was not added by the user %s', user)
+                pass
+            serializer = NotesSerializer(data=data, partial=True)
+            if serializer.is_valid():
+                note_create = serializer.save(user_id=user.id)
+                response = {'success': True, 'message': "note created", 'data': []}
+                if serializer.data['is_archive']:
+                    redis.hmset(str(user.id) + "is_archive",
+                              {note_create.id: str(json.dumps(serializer.data))})  # created note is cached in redis
+                    logger.info("note is created for %s with note id as %s", user, note_create.id)
+                    return HttpResponse(json.dumps(response, indent=2), status=201)
+                else:
+                    if serializer.data['reminder']:
+                        redis.hmset("reminder",
+                                  {note_create.id: str(json.dumps({"email": user.email, "user": str(user),
+                                                                   "note_id": note_create.id,
+                                                                   "reminder": serializer.data["reminder"]}))})
+                    redis.hmset(str(user.id) + "note",
+                              {note_create.id: str(json.dumps(serializer.data))})
+
+                    logger.info("note is created for %s with note data as %s", user, note_create.__repr__())
+                    return HttpResponse(json.dumps(response, indent=2), status=201)
+            logger.error(" %s for  %s", user, serializer.errors)
+            response = {'success': False, 'message': "note was not created", 'data': []}
+            return HttpResponse(json.dumps(response, indent=2), status=400)
+        except KeyError as e:
+            print(e)
+            logger.error("got %s error for creating note as no data was provided for user %s", str(e), user)
+            response = {'success': False, 'message': "one of the field is empty ", 'data': []}
+            return Response(response, status=400)
+        except Exception as e:
+            print(e)
+            logger.error("got %s error for creating note for user %s", str(e), user)
+            response = {'success': False, 'message': "something went wrong", 'data': []}
+            return Response(response, status=400)
+
+    def get(self, request):
+        """
+        Summary:
             Note class will let authorized user to create and get notes.
         Methods:
             get: User will get all the notes.
-            post: User will able to create new note.
             """
         response = {'success': False, 'message': 'no notes', 'data': []}
         notes_list = Notes.objects.all()
@@ -84,84 +149,16 @@ class NoteCreate(GenericAPIView):
         logger.info("all the notes are rendered to html page for user %s", user)
         return render(request, 'listofnotes.html', {'notes': notes}, status=200)
 
-        #     user = request.user
-        #     redis_data = red.hvals(str(user.id) + "label")
-        #     print(redis_data, 'redis datagklsfjgvkljsn')
-        #     if len(redis_data) == 0:
-        #         notes = Notes.objects.filter(user_id=user.id)
-        #         Note_name = [i.note for i in notes]
-        #         # print(labels,label_name,'hfgjnxcgnfnhfgnfh')
-        #         logger.info("labels where taken from db for user")
-        #         return Response(Note_name, status=200)
-        #     logger.info("got notes ")
-        #     return render(request, 'listofnotes.html', {'notes': notes}, status=200)
-        # except Exception as e:
-        #     logger.info("happen something while rendering notes")
-        #     response = {'success': False, 'message': "bad response", 'data': []}
-        #     return Response(response, status=400)
-
-    def post(request):
-        """creating and posting all the notes present in user database
-            Summary:
-                 New note will be create by the User.
-             Exception:
-                 KeyError: object
-             Returns:
-                 response: SMD format of note create message or with error message
-                """
-        user = request.user
-        try:
-            data = request.data
-            user = request.user
-            collaborator_list = []  # empty collaborator list to id                                           #label input and col id
-            data["label"] = [Label.objects.filter(user_id=user.id, name=name).values()[0]['id'] for name in
-                             data["label"]]
-            collaborator = data['collaborators']
-            for email in collaborator:
-                email_id = User.objects.filter(email=email)
-                user_id = email_id.values()[0]['id']
-                collaborator_list.append(user_id)
-            data['collaborators'] = collaborator_list
-            # print(data['collaborators'])            #prints collaborator who are all in db
-            serializer = NotesSerializer(data=data, partial=True)
-            if serializer.is_valid():
-                note_create = serializer.save(user_id=user.id)
-                response = {'success': True, 'message': "note created", 'data': []}
-                if serializer.data['is_archive']:
-                    red.hmset(str(user.id) + "is_archive",
-                              {note_create.id: str(json.dumps(serializer.data))})  # created note is cached in redis
-                    logger.info("note created %s and note id is %s", user, note_create.id)
-                    return HttpResponse(json.dumps(response, indent=2), status=201)
-                else:
-                    if serializer.data['reminder']:
-                        red.hmset("reminder", {note_create.id: str(json.dumps(
-                            {"email": user.email, "user": str(user), "note_id": note_create.id,
-                             "reminder": serializer.data["reminder"]}))})
-                    red.hmset(str(user.id) + "note", {note_create.id: str(json.dumps(serializer.data))})
-                    logger.info("note is created for %s with note data as %s", user, note_create)
-                    return HttpResponse(json.dumps(response, indent=2), status=201)
-            logger.error(" %s for  %s", user, serializer.errors)
-            response = {'success': False, 'message': " note can't create", 'data': []}
-            return HttpResponse(json.dumps(response, indent=2), status=400)
-        except Exception as e:
-            print(e)
-            print("error while creating label")
-            logger.error("exception %s", str(e))
-            response = {'success': False, 'message': "bas response", 'data': []}
-            return Response(response, status=400)
-
 
 @method_decorator(login_decorator, name='dispatch')
 class NoteUpdate(GenericAPIView):
     serializer_class = UpdateSerializer
 
     def put(request, note_id):
-        """Update Note attributes using pirticuler Note_ID
-              Summary:
-
-             Note update class will let authorized user to update and delete note.
+        """
+        Summary:
+             Update Note attributes using pirticuler Note_ID
         Methods:
-            get: User will get particular note which he want.
             put: User will able to update existing note.
             delete: User will able to delete  note.
 
@@ -202,23 +199,23 @@ class NoteUpdate(GenericAPIView):
                 print(serializer.data)
                 # pdb.set_trace()
                 if serializer.data['is_archive']:
-                    red.hmset(str(user.id) + "is_archive",
+                    redis.hmset(str(user.id) + "is_archive",
                               {note_create.id: str(json.dumps(serializer.data))})
                     logger.info("note was updated with note id :%s for user :%s ", note_id, user)
                     return HttpResponse(json.dumps(response, indent=2), status=200)
                 elif serializer.data['is_trashed']:
-                    red.hmset(str(user.id) + "is_trashed",
+                    redis.hmset(str(user.id) + "is_trashed",
                               {note_create.id: str(json.dumps(serializer.data))})
                     logger.info("note was updated with note id :%s for user :%s ", note_id, user)
                     return HttpResponse(json.dumps(response, indent=2), status=200)
                 else:
                     if serializer.data['reminder']:
-                        red.hmset("reminder",
+                        redis.hmset("reminder",
                                   {note_create.id: str(json.dumps({"email": user.email, "user": str(user),
                                                                    "note_id": note_create.id,
                                                                    "reminder": serializer.data["reminder"]}))})
 
-                    red.hmset(str(user.id) + "note",
+                    redis.hmset(str(user.id) + "note",
                               {note_create.id: str(json.dumps(serializer.data))})
                     logger.info("note was updated with note id :%s for user :%s ", note_id, user)
                     return HttpResponse(json.dumps(response, indent=2), status=200)
@@ -252,14 +249,13 @@ class NoteUpdate(GenericAPIView):
             note.save()
             note_data = Notes.objects.filter(id=note_id)
             serialized_data = NotesSerializer(note_data, many=True)
-            red.hmset(str(user.id) + "is_trashed", {note.id: str(json.dumps(serialized_data.data))})
-            red.hdel(str(user.id) + "note", note_id)
+            redis.hmset(str(user.id) + "is_trashed", {note.id: str(json.dumps(serialized_data.data))})
+            redis.hdel(str(user.id) + "note", note_id)
             logger.info('note deleted')
             response = {'success': True, 'message': 'note deleted successfully', 'data': []}
             return HttpResponse(json.dumps(response, indent=2), status=status.HTTP_201_CREATED)
-        except Exception as e:
-            logger.info('something happend wrrong while delete note %s', str(e))
-            # print(e)
+        except Exception:
+            logger.info('something happend wrrong while delete note %s')
             return Response(response, status=400)
 
 
@@ -269,59 +265,61 @@ class LabelsCreate(GenericAPIView):
 
     def get(self, request):
         """Getting all the labels present in user database
-             Summary:
+        Summary:
              Label create class will let authorized user to get and create label.
-            Methods:
-                get: User will get all the created labels by the  user.
-                post: User will able to create more labels.
+        Methods:
+            get: User will get all the created labels by the  user.
+            post: User will able to create more labels.
         """
         response = {"success": False, "message": "invalid response", "data": []}
         user = request.user
-        print(user)
-        redis_data = red.hvals(str(user.id) + "label")
-        print(redis_data, 'redis datagklsfjgvkljsn')
+        redis_data = redis.hvals(str(user.id) + "label")
         if len(redis_data) == 0:
             labels = Label.objects.filter(user_id=user.id)
             label_name = [i.name for i in labels]
-            # print(labels,label_name,'hfgjnxcgnfnhfgnfh')
             logger.info("labels where taken from db for user", )
             return Response(label_name, status=200)
-        logger.info("got lables ")
+        logger.info("got lables for the user")
         return Response(redis_data, status=200)
 
     def post(self, request):
-        """creating and posting all the labels present in user database
+        """
             Summary:
-                label will be deleted by the User.
+                label will be create by the User.
             Exception:
                 Exception:  if anything goes wrong.
-            Returns:
-                response:  User will able to delete label or error msg if something goes wrong
+            Method:
+                 post: User will able to create more labels.
         """
         user = request.user
         response = {"success": False, "message": "invalid response", "data": []}
         label = request.data["name"]
-        if Label.objects.filter(user_id=user.id, name=label).exists():
-            logger.info('label is already exists for')
-            response['message'] = "label name is already exists"
-            return Response(response, status=400)
-        else:
-            label_created = Label.objects.create(user_id=user.id, name=label)
-            red.hmset(str(user.id) + "label", {label_created.id: label})
-            logger.info("label is created for %s", user)
-            response = {"success": True, "message": "label is created", "data": label}
-            return HttpResponse(json.dumps(response), status=201)
+        try:
+            if Label.objects.filter(user_id=user.id, name=label).exists():
+                logger.info('label is already exists for')
+                response['message'] = "label name is already exists"
+                return Response(response, status=400)
+            else:
+                label_created = Label.objects.create(user_id=user.id, name=label)
+                redis.hmset(str(user.id) + "label", {label_created.id: label})
+                logger.info("label is created for %s", user)
+                response = {"success": True, "message": "label is created", "data": label}
+                return HttpResponse(json.dumps(response), status=201)
+        except Exception:
+            logger.info("got an Exception for create label")
+            response = {"success": False, "message": "Label Creation not successful", "data": []}
+            return response
 
-
+@method_decorator(login_decorator, name='dispatch')
 class LabelsUpdate(GenericAPIView):
     serializer_class = LabelSerializer
 
     def put(self, request, label_id):
-        """Update Label using pirticuler Label_ID
+        """
          Summary:
-            Archive class will let authorized user to get archive notes.
+            Update Label using pirticuler Label_ID
        Methods:
-           get: User will be able to get all archive notes.
+           put: User will be able to update all notes.
         """
         response = {"success": False, "message": "bad happened", "data": []}
         user = request.user
@@ -334,8 +332,8 @@ class LabelsUpdate(GenericAPIView):
             print(label_updated, 'wrtgtestgestygres')
             label_updated.name = label_name
             label_updated.save()
-            red.hmset(str(user.id) + "label", {label_updated.id: label_name})
-            print(red.hmset, 'ertygestygestgsetyetyg')
+            redis.hmset(str(user.id) + "label", {label_updated.id: label_name})
+            print(redis.hmset, 'ertygestygestgsetyetyg')
             response["message"] = "label updated successfully"
             response["data"] = [label_name]
             response["success"] = True
@@ -346,9 +344,9 @@ class LabelsUpdate(GenericAPIView):
             return Response(response, status=404)
 
     def delete(self, request, label_id):
-        """Deleteing pirticuler label using Label_ID
+        """
         Summary:
-              Label will be deleted by the User.
+              Deleteing pirticuler label using Label_ID
           Exception:
               Exception object
           Returns:
@@ -357,28 +355,28 @@ class LabelsUpdate(GenericAPIView):
         response = {"success": False, "message": "label does not exist ", "data": []}
         user = request.user
         try:
-            red.hdel(str(user.id) + "label", label_id)
+            redis.hdel(str(user.id) + "label", label_id)
             label_id = Label.objects.get(id=label_id, user_id=user.id)
             label_id.delete()
             logger.info("label is deleted for %s", user)
             response = {"success": True, "message": "label is deleted", "data": []}
-            return Response(response, status=204)
+            return HttpResponse(json.dumps(response), status=200)
         except Exception as e:
             logger.info("got error : %s while deleting label for  %s", str(e), user)
             return Response(response, status=404)
 
-
+@method_decorator(login_decorator, name='dispatch')
 class Archive(GenericAPIView):
     def get(self, request):
-        """Getting all the Archived notes present in user database
-             Summary:
+        """
+        Summary:
             Archive class will let authorized user to get archive notes.
-            Methods:
+        Methods:
             get: User will be able to get all archive notes.
         """
         response = {"success": False, "message": "bad response", "data": []}
         user = request.user
-        redis_data = red.hvals(str(user.id) + "is_archive")
+        redis_data = redis.hvals(str(user.id) + "is_archive")
         try:
             if len(redis_data) == 0:
                 response = {"success": True, "message": "archived notes are here", "data": []}
@@ -398,17 +396,17 @@ class Archive(GenericAPIView):
 
 class Trash(GenericAPIView):
     def get(self, request):
-        """Getting all the Deleted notes present in user database
-            Summary:
-            Trash class will let authorized user to get Trashed notes.
-            Methods:
+        """
+        Summary:
+            Getting all the Deleted notes present in user database
+        Methods:
             get: User will be able to get all trashed notes.
         """
         response = {"success": False, "message": "bad response", "data": []}
         user = request.user
         # pdb.set_trace()
         try:
-            redis_data = red.hvals(str(user.id) + "is_trashed")
+            redis_data = redis.hvals(str(user.id) + "is_trashed")
             if len(redis_data) == 0:
                 user = request.user
                 no = Notes.objects.filter(user_id=user.id, is_trashed=True)
@@ -421,16 +419,16 @@ class Trash(GenericAPIView):
             logger.info("Trash data is loaded for %s from redis", user)
             return HttpResponse(redis_data)
         except Exception as e:
-            logger.error("error:%e for %s while fetching trashed notes", user, str(e))
+            logger.error("error for while fetching trashed notes")
             HttpResponse(json.dumps(response, status=404))
 
 
 class Remider(GenericAPIView):
     def get(self, request):
-        """Getting all the Redminded notes present in user database
-            Summary:
-            Reminder class will let authorized user to get reminder notes.
-       Methods:
+        """
+        Summary:
+            Getting all the Redminded notes present in user database
+        Methods:
             get: User will be able to get all reminder notes with fired and upcoming reminder.
                 for upcoming reminder email will be set to user email address.
         """
@@ -466,15 +464,14 @@ class Celery(GenericAPIView):
     serializer_class = NotesSerializer
 
     def get(self, request):
-        """Reminder Email
-            Summary:
+        """
+        Summary:
             Celery class works on clery beat and every 1 min this end point is hit.
-            Methods:
+        Methods:
             get: this method where logic is written for triggering reminders notification service where
                email is sent if reminder time matched with current time.
         """
         response = {"success": False, "message": "bad response", "data": []}
-
         reminder = Notes.objects.filter(reminder__isnull=False)
         start = timezone.now()
         end = timezone.now() + timedelta(minutes=1)
@@ -503,11 +500,8 @@ class Searchnotes(GenericAPIView):
     serializer_class = NoteDocSerializer
 
     def post(self, request):
-        import pdb
-        pdb.set_trace()
         """Elastic search for a notes,title..etc"""
         response = {"success": False, "message": "bad req", "data": []}
-
         try:
             find = request.data['title']
             res = Document.search().query({
@@ -523,10 +517,8 @@ class Searchnotes(GenericAPIView):
                     ]
                 }
             })
-            print("search aythu")
-            data = NotesSerializer(res.to_queryset(), many=True)
-            print(data,"data inside")
-            return HttpResponse(json.dumps(data.data, indent=2), status=200)
+            result = NotesSerializer(res.to_queryset(), many=True)
+            return HttpResponse(json.dumps(result.data, indent=2), status=200)
         except Exception as e:
             logger.error("error occurs",str(e))
             return HttpResponse(json.dumps(response, indent=2), status=400)

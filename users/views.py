@@ -189,7 +189,7 @@ def verify(request, token):
             username1 = {'userReset': user.username}
             print(username1)
             messages.info(request, "reset")
-            return redirect('/api/reset_password/' + str(token) + '/')
+            return redirect('/api/resetpassword/' + str(token) + '/')
         else:
             messages.info("Invalid user")
             return redirect('register')
@@ -198,14 +198,16 @@ def verify(request, token):
         return redirect('resetmail')
 
 
-class reset_password(GenericAPIView):
+class resetpassword(GenericAPIView):
     serializer_class = ResetSerializer
 
     def post(self, request, token):
         """ResetPassword for Authenticated user"""
         if request.method == 'POST':
             password = request.data['password']
+            # user_details = jwt.decode(token, 'secret', algorithms='HS256')
             user_details = jwt.decode(token, 'secret', algorithms='HS256')
+            print(user_details,'wrasgtfasrgfas')
             username = user_details['username']
             if User.objects.filter(username=username).exists():
                 user = User.objects.get(username=username)
@@ -238,20 +240,36 @@ class SendEmail(GenericAPIView):
     serializer_class = ForgotSerializer
     def post(self,request):
         """User email"""
+        # import pdb
+        # pdb.set_trace()
         smd = {"success": False, "message": "Email sending fail", "data": []}
         emailid = request.data["email"]
         user1=request.user
+        print(user1)
         try:
             user = User.objects.get(email=emailid)
+            print(user)
             if user is not None:
-                subject, from_email, to = 'Email Validation', EMAIL_HOST_USER, emailid
-                html_content = render_to_string('Validation.html', {'user': user.username,  'domain': get_current_site(request).domain})  # render with dynamic value
-                text_content = strip_tags(html_content)
-                msg = EmailMultiAlternatives(subject, text_content, from_email, [to])
-                msg.attach_alternative(html_content, "text/html")
+                payload = {'username': user.username,
+                           'email': user.email}
+
+                # key = { jwt.encode(payload, "secret", algorithm="HS256").decode('utf-8')}
+                key = jwt.encode(payload, "secret", algorithm="HS256").decode('utf-8')
+                currentsite = get_current_site(request)
+                url = str(key)
+                surl = get_surl(url)
+                short = surl.split("/")
+                mail_subject = "Reset your password by clicking below link"
+                mail_message = render_to_string('new.html', {'user': user.username,
+                                                                'domain': currentsite,
+                                                                'user_token': short[2]})
+                print(mail_message)
+                tepm=strip_tags(mail_message)
+                msg = EmailMultiAlternatives(mail_subject, tepm, 'krndileep@gmail.com', [emailid])
+                msg.attach_alternative(mail_message, "text/html")
                 msg.send()
-                smd = {"success": True, "message": "Success", "data": [html_content]}
-                return HttpResponse(json.dumps(smd), status=200)
+                smd = {'success': True, 'message': "check your mail for reset", 'data': []}
+                return HttpResponse(json.dumps(smd), status=201)
         except Exception:
             smd = {"success": False, "message": "Inavalid user or Email id", "data": []}
             return HttpResponse(json.dumps(smd), status=400)

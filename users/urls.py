@@ -8,9 +8,9 @@ urlpatterns =[
                 path('activate/<token>/',views.activate,name='activate'),
                 path('verify/<token>/',views.verify,name='verify'),
                 path("page",views.page,name='page'),
-                path("logout/",views.logout.as_view(),name='logout'),
-                path('sendmail/',views.sendmail.as_view(),name='resetmail'),
-                path('reset_password/<token>/',views.reset_password.as_view(),name='resetmail'),
+                path("logout/",views.logout,name='logout'),
+                path('sendmail/',views.sendmail.as_view(),name='ghfklj'),
+                path('resetpassword/<token>/',views.resetpassword,name='resetmail'),
                 path("template/", views.SendEmail.as_view(),name='sendmail'),
                 # path('hello/', views.HelloView.as_view(), name='hello'),
 ]

@@ -107,7 +107,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',  # 'mysql.connector.django',#'django.db.backends.mysql',
         'NAME': 'fundoonotes',
         'USER': 'newuser',
-        'PASSWORD': 'Duggu@123',
+        'PASSWORD': os.getenv('PASSWORD'),
         'HOST': 'localhost',
         'PORT': '3306'
 
@@ -172,8 +172,8 @@ MEDIA_URL = '/media/'
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 LOGIN_REDIRECT_URL = '/sociallogin/page'
-SOCIAL_AUTH_GITHUB_KEY = 'e749db2bf8cacb128fc2'
-SOCIAL_AUTH_GITHUB_SECRET = 'c8e87dcfb06a2af407ea61f3c86d0e7b5819d83e'
+SOCIAL_AUTH_GITHUB_KEY = os.getenv('SOCIAL_AUTH_GITHUB_KEY')
+SOCIAL_AUTH_GITHUB_SECRET = os.getenv('SOCIAL_AUTH_GITHUB_SECRET')
 TIME_ZONE = 'Asia/Kolkata'
 file_handler = logging.FileHandler('fundoonotes.log')
 AWS_BUCKET = os.getenv("AWS_BUCKET")

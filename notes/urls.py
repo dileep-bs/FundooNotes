@@ -4,7 +4,7 @@ from . import views
 
 urlpatterns = [
     path("uploadimage/", views.UploadMedia.as_view(), name='UploadImage'),
-    path("notes/", views.NoteCreate.as_view(), name="notes"),
+    path("notes/", views.NoteData.as_view(), name="notes"),
     path("note/<note_id>/", views.NoteUpdate.as_view(), name="note_update"),
     path("label/", views.LabelsCreate.as_view(), name="label_get"),
     path("label/<label_id>/", views.LabelsUpdate.as_view(), name="label_update"),
