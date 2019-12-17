@@ -1,4 +1,5 @@
 import json
+import logging
 import pdb
 import jwt
 from django.conf.global_settings import EMAIL_HOST_USER
@@ -9,21 +10,19 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMessage, send_mail, EmailMultiAlternatives
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
-from django.template.loader import render_to_string
-from django_short_url.models import ShortURL
 from django_short_url.models import ShortURL
 from django_short_url.views import get_surl
 from rest_framework.generics import GenericAPIView
-
 from .serialized import LoginSerializer, ResetSerializer, UserSerializer, ForgotSerializer
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-# from fundoonotes.celery import debug_task
-# from fundoonotes.fundoonotes.
-def index(request):
-    return render(request, 'index.html')
 
+from ..fundoonotes.settings import file_handler
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(file_handler)
 
 class login(GenericAPIView):
     serializer_class = LoginSerializer
@@ -36,20 +35,20 @@ class login(GenericAPIView):
             smd = {'success': False, 'message': "login Failed", 'data': []}
             payload = {'username': username, }
             user = auth.authenticate(username=username, password=password)
-            # debug_task.delay()
             try:
                 user = auth.authenticate(username=username, password=password)
             except ValueError as e:
-                print(e)
+                logger.info("something went wrong")
             if user is not None:
                 jwt_token = {"token": jwt.encode(payload, "secret", algorithm="HS256").decode('utf-8')}
                 token = jwt_token['token']
-                smd = {'success': True, 'message': "login successful", 'data': [token], }
+                smd = {'success': True, 'message': "login successful", 'data': [], }
                 return HttpResponse(json.dumps(smd), status=201)
             else:
-                smd['message'] = 'Check your password and username'
+                smd['message'] = 'Check your Username and Password'
                 return HttpResponse(json.dumps(smd), status=400)
         except Exception as e:
+            logger.info("something went wrong,Try again!.......")
             smd = {'success': False, 'message': "something went wrong", 'data': []}
             return HttpResponse(json.dumps(smd))
 
@@ -65,13 +64,13 @@ class register(GenericAPIView):
             email = request.data['email']
             smd = {'success': False, 'message': "reg failed", 'data': []}
             if User.objects.filter(email=email).exists():
+                logger.info("Email Exist")
                 smd['message'] = 'Email is already registered'
                 return HttpResponse(json.dumps(smd), status=400)
             try:
                 user = User.objects.create_user(username=username, password=password, email=email, is_active=False)
                 payload = {'username': user.username, 'email': user.email}
                 key = jwt.encode(payload, "secret", algorithm="HS256").decode('utf-8')
-                currentsite = get_current_site(request)
                 url = str(key)
                 surl = get_surl(url)
                 short = surl.split("/")
@@ -82,13 +81,13 @@ class register(GenericAPIView):
                 recipient_email = [EMAIL_HOST_USER]
                 email = EmailMessage(mail_subject, mail_message, to=[recipient_email])
                 email.send()
-                smd = {'success': False, 'message': "Check your mail for activate", 'data': [key]}
+                smd = {'success': False, 'message': "Check your mail for activate", 'data': []}
                 return HttpResponse(json.dumps(smd), status=201)
             except Exception:
                 smd["message"] = "username already taken"
                 return HttpResponse(json.dumps(smd), status=400)
-        except Exception as e:
-            smd["message"] = str(e)
+        except Exception:
+            smd["message"] = 'Check the fields.. '
             return HttpResponse(json.dumps(smd), status=400)
 
 
@@ -125,22 +124,17 @@ class sendmail(GenericAPIView):
         try:
             user = User.objects.get(email=emailid)
             if user is not None:
-                payload = {'username': user.username,
-                           'email': user.email}
-
-                # key = { jwt.encode(payload, "secret", algorithm="HS256").decode('utf-8')}
+                payload = {'username': user.username,  'email': user.email}
                 key = jwt.encode(payload, "secret", algorithm="HS256").decode('utf-8')
-                currentsite = get_current_site(request)
                 url = str(key)
                 surl = get_surl(url)
                 short = surl.split("/")
                 mail_subject = "Reset your password by clicking below link"
-                mail_message = render_to_string('verify.html',                           {'user': user.username,
+                mail_message = render_to_string('verify.html',{'user': user.username,
                                                  'domain': get_current_site(request).domain,
                                                  'token': short[2]})
-                store=mail_message
                 send_mail(mail_subject, mail_message, EMAIL_HOST_USER, [emailid])
-                smd = {'success': True,        'message': "check your mail for reset",             'data': [key]}
+                smd = {'success': True, 'message': "check your mail for reset", 'data': []}
                 return HttpResponse(json.dumps(smd), status=201)
         except Exception as e:
             print(e)
@@ -153,13 +147,12 @@ def activate(request, token):
     try:
         tokenobj = ShortURL.objects.get(surl=token)
         token = tokenobj.lurl
-        print(token)
         user_details = jwt.decode(token, 'secret', algorithms='HS256')
         user_name = user_details['username']
         try:
             user = User.objects.get(username=user_name)
         except ObjectDoesNotExist as e:
-            print(e)
+            logger.info("invalid token or user")
         if user is not None:
             user.is_active = True
             user.save()
@@ -168,7 +161,7 @@ def activate(request, token):
         else:
             return redirect('register')
     except KeyError:
-        messages.info(request, 'mail sending failed')
+        messages.info(request, 'Token missing..')
         return redirect('/register')
 
 
@@ -176,18 +169,13 @@ def verify(request, token):
     try:
         tokenobj = ShortURL.objects.get(surl=token)
         token = tokenobj.lurl
-        print(token)
         user_details = jwt.decode(token, 'secret', algorithms='HS256')
         username = user_details['username']
         try:
             user = User.objects.get(username=username)
         except ObjectDoesNotExist as e:
-            print(e)
+            logger.info("invalid token or user")
         if user is not None:
-            # currentsite = get_current_site(request)
-            # string = str(currentsite) + '/resetpassword/' + username + '/'
-            username1 = {'userReset': user.username}
-            print(username1)
             messages.info(request, "reset")
             return redirect('/api/resetpassword/' + str(token) + '/')
         else:
@@ -205,7 +193,6 @@ class resetpassword(GenericAPIView):
         """ResetPassword for Authenticated user"""
         if request.method == 'POST':
             password = request.data['password']
-            # user_details = jwt.decode(token, 'secret', algorithms='HS256')
             user_details = jwt.decode(token, 'secret', algorithms='HS256')
             print(user_details,'wrasgtfasrgfas')
             username = user_details['username']
@@ -216,10 +203,6 @@ class resetpassword(GenericAPIView):
                 messages.info(request, "password reset successfully")
                 return redirect("login")
         return render(request, 'resetpassword.html')
-
-
-def page(request):
-    return render(request, 'page.html')
 
 
 class logout(GenericAPIView):
@@ -240,32 +223,21 @@ class SendEmail(GenericAPIView):
     serializer_class = ForgotSerializer
     def post(self,request):
         """User email"""
-        # import pdb
-        # pdb.set_trace()
         smd = {"success": False, "message": "Email sending fail", "data": []}
         emailid = request.data["email"]
-        user1=request.user
-        print(user1)
         try:
             user = User.objects.get(email=emailid)
-            print(user)
             if user is not None:
-                payload = {'username': user.username,
-                           'email': user.email}
-
-                # key = { jwt.encode(payload, "secret", algorithm="HS256").decode('utf-8')}
+                payload = {'username': user.username,    'email': user.email}
                 key = jwt.encode(payload, "secret", algorithm="HS256").decode('utf-8')
                 currentsite = get_current_site(request)
                 url = str(key)
                 surl = get_surl(url)
                 short = surl.split("/")
                 mail_subject = "Reset your password by clicking below link"
-                mail_message = render_to_string('new.html', {'user': user.username,
-                                                                'domain': currentsite,
-                                                                'user_token': short[2]})
-                print(mail_message)
-                tepm=strip_tags(mail_message)
-                msg = EmailMultiAlternatives(mail_subject, tepm, 'krndileep@gmail.com', [emailid])
+                mail_message = render_to_string('new.html', {'user': user.username, 'domain': currentsite, 'user_token': short[2]})
+                temp=strip_tags(mail_message)
+                msg = EmailMultiAlternatives(mail_subject, temp, 'krndileep@gmail.com', [emailid])
                 msg.attach_alternative(mail_message, "text/html")
                 msg.send()
                 smd = {'success': True, 'message': "check your mail for reset", 'data': []}
