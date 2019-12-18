@@ -1,17 +1,13 @@
 import json
 import logging
-import jwt
 from django.conf.global_settings import EMAIL_HOST_USER
 from django.contrib import messages
 from django.contrib.auth.models import User, auth
 from django.contrib.sites.shortcuts import get_current_site
-from django.core.exceptions import ObjectDoesNotExist
-from django.core.mail import EmailMessage, send_mail
+from django.core.mail import send_mail
 from django.http import HttpResponse, request
 from django.shortcuts import render, redirect
 from django.urls import reverse
-from django_short_url.models import ShortURL
-from django_short_url.views import get_surl
 from rest_framework.generics import GenericAPIView
 from .serialized import LoginSerializer, ResetSerializer, UserSerializer, ForgotSerializer
 from django.core.mail import EmailMultiAlternatives
@@ -21,23 +17,24 @@ from fundoonotes.settings import file_handler
 from utility import Crypto
 from utility import Response
 
-obj=Crypto()
-obj1=Response()
+obj = Crypto()
+obj1 = Response()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(file_handler)
 
-class login(GenericAPIView):
+
+class Login(GenericAPIView):
     serializer_class = LoginSerializer
 
     def post(self, request):
         """
         :param APIView:
         --------------
-                        user request is made from the user
+                user request is made from the user
         :return:
         --------
-                    will check the credentials and will user
+                will check the credentials and will user
         """
         try:
             username = request.data['username']
@@ -58,19 +55,23 @@ class login(GenericAPIView):
             return HttpResponse(json.dumps(smd))
 
 
-class register(GenericAPIView):
+class Register(GenericAPIView):
     serializer_class = UserSerializer
 
     def post(self, request):
         """
-            param request: request is made after filling the form
-            return: will send him the JWT token for validation
+            :param request:
+             -------------
+                        request is made after filling the form
+            :return:
+            ------------
+                        will send him the JWT token for validation
         """
+        username = request.data['username']
+        email = request.data['email']
+        password = request.data['password']
+        smd = {'success': False, 'message': "Not registered yet", 'data': []}
         try:
-            username = request.data['username']
-            email = request.data['email']
-            password = request.data['password']
-            smd = { 'success': False, 'message': "Not registered yet",'data': [],}
             if username == "" or email == "" or password == "":
                 smd['message'] = "one of the details missing"
                 logger.error("one of the details missing logging in")
@@ -86,7 +87,10 @@ class register(GenericAPIView):
                 logger.error("username is already registered  while logging in")
                 return HttpResponse(json.dumps(smd), status=400)
             else:
-                user = User.objects.create_user(username=username, email=email, password=password, is_active=True)
+                user = User.objects.create_user(username=username,
+                                                email=email,
+                                                password=password,
+                                                is_active=True)
                 user.save()
                 if user is not None:
                     payload = {'username': user.username, 'email': user.email}
@@ -109,13 +113,12 @@ class register(GenericAPIView):
             smd["message"] = "username data not sufficient"
             return HttpResponse(json.dumps(smd), status=400)
         except Exception as e:
-            smd["message"] = "username already taken"
+            smd["message"] = "something went wrong"
             logger.error("error: %s while loging in ", str(e))
             return HttpResponse(json.dumps(smd), status=400)
 
 
-
-class sendmail(GenericAPIView):
+class Sendmail(GenericAPIView):
     serializer_class = ForgotSerializer
 
     def post(self, request):
@@ -137,11 +140,11 @@ class sendmail(GenericAPIView):
                 payload = {'username': user.username,
                            'email': user.email}
                 key = obj.encode_token(payload)
-                short=obj.short_url(key)
+                short = obj.short_url(key)
                 mail_subject = "Reset your password by clicking below link"
                 mail_message = render_to_string('verify.html', {'user': user.username,
                                                                 'domain': get_current_site(request).domain,
-                                                                'u_token': short[2]})
+                                                                'u_token': short[2]}, )
                 send_mail(mail_subject, mail_message, EMAIL_HOST_USER, [emailid])
                 smd = {'success': True, 'message': "check your mail for reset", 'data': []}
                 return HttpResponse(json.dumps(smd), status=201)
@@ -170,26 +173,32 @@ def activate(request, token2):
 
 def verify(request, token1):
     try:
-        username=obj.decode_tok(token1)
+        username = obj.decode_tok(token1)
         user = User.objects.get(username=username)
         if user is not None:
-            return redirect(reverse('resetpassword',args={'tok':token1}))
+            return redirect(reverse('resetpassword', args=[token1]))
         else:
             logger.info("Invalid user")
             return redirect('register')
     except Exception as e:
-        logger.info("User credential missing",str(e))
+        logger.info("User credential missing", str(e))
         return redirect('resetpassword')
 
 
 class resetpassword(GenericAPIView):
     serializer_class = ResetSerializer
 
-    def post(self, request, tok):
+    def post(self, request, token1):
         """
-        :param surl:  token is again send to the user
-        :param request:  user will request for resetting password
-        :return: will reset the password
+        :param surl:
+        ------------
+                    token is again send to the user
+        :param request:
+        ------------
+                    user will request for resetting password
+        :return:
+        ------------
+                    will reset the password
         """
         smd = {"success": False, "message": "not a vaild user", "data": []}
         if request.method == 'POST':
@@ -200,30 +209,34 @@ class resetpassword(GenericAPIView):
                     logger.info("Password condition failed")
                     return HttpResponse(json.dumps(smd), status=200)
                 else:
-                    username = obj.decode_tok(tok)
+                    username = obj.decode_tok(token1)
                     user = User.objects.get(username=username)
                     user.set_password(password)
                     user.save()
-                    logger.info(request, "password reset successfully")
                     return redirect("login")
-            except ObjectDoesNotExist as e:
-                smd = {"success": False, "message": "somethong went wrong", "data": []}
-                logger.info("user not found",str(e))
+            except Exception as e:
+                smd["success"] = False
+                smd["message"] = "somethong went wrong"
+                logger.info("Coudnt Reset password", str(e))
+                return HttpResponse(json.dumps(smd), status=400)
 
 
-class logout(GenericAPIView):
+class Logout(GenericAPIView):
     serializer_class = LoginSerializer
 
     def get(self, request):
         """
-        param request: logout request is made
+        :param request:
+        --------------
+                    logout request is made
         """
-        smd = {"success": False, "message": "not a vaild user", "data": []}
+        smd = {"success": False, "message": "Invalid User", "data": []}
         try:
-            user = request.user
-            smd = {"success": True, "message": "logged out", "data": []}
+            request.user
+            smd = {"success": True, "message": "You logged out", "data": []}
             return HttpResponse(json.dumps(smd), status=200)
         except Exception:
+            logger.info("Something went wrong!....")
             return HttpResponse(json.dumps(smd), status=400)
 
 
@@ -232,12 +245,15 @@ class SendEmail(GenericAPIView):
 
     def post(self, request):
         """
-            :param request: request is made for reset template password
-            :return:  will return email where password reset template will be attached
+            :param request:
+            ---------------
+                    request is made for reset template password
+            :return:
+            -----------
+                    will return email where password reset template will be attached
         """
-        smd = {"success": False, "message": "Email sending fail", "data": []}
+        smd = {"success": False, "message": "Inavalid user or Email id", "data": []}
         emailid = request.data["email"]
-        user1 = request.user
         try:
             user = User.objects.get(email=emailid)
             if user is not None:
@@ -252,19 +268,22 @@ class SendEmail(GenericAPIView):
                     'new.html', {
                         'user': user.username,
                         'domain': get_current_site(request).domain,
-                        'user_token': short[2]
+                        'user_token': short[2],
                     }
                 )
                 tepm = strip_tags(mail_message)
                 msg = EmailMultiAlternatives(mail_subject, tepm, emailid, [emailid])
                 msg.attach_alternative(mail_message, "text/html")
                 msg.send()
-                response_result = {
-                    'success': True,
-                    'message': "check your mail for reset your password",
-                    'data': []
-                }
-                return HttpResponse(json.dumps(response_result), status=201)
-        except Exception:
-            smd = {"success": False, "message": "Inavalid user or Email id", "data": []}
+                smd = {'success': True,
+                       'message': "check your mail for reset your password",
+                       'data': [],
+                       }
+                return HttpResponse(json.dumps(smd), status=201)
+        except User.DoesNotExist:
+            smd['message'] = 'Please enter valid Email ID'
+            logger.info("Invalid Email Entered", )
+            return HttpResponse(json.dumps(smd), status=400)
+        except Exception as e:
+            logger.info("Something went wrong", str(e))
             return HttpResponse(json.dumps(smd), status=400)

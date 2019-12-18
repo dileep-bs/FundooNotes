@@ -1,7 +1,7 @@
 import jwt
-# import settings
 from django.conf import settings
 from django.contrib.auth.models import User
+# from django_short_url.models import ShortURL
 from django_short_url.models import ShortURL
 from django_short_url.views import get_surl
 
@@ -37,6 +37,7 @@ class Crypto:
         return token
 
     def decode_tok(self, token2):
+        print(token2,'kkkkkkkkkkkkkkkkkkkk')
         tokenobj = ShortURL.objects.get(surl=token2)
         tokens = tokenobj.lurl
         user_details = jwt.decode(tokens, self.__secret, self.__algo)

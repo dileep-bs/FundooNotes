@@ -72,26 +72,21 @@ class NoteData(GenericAPIView):
             if len(data) == 0:
                 raise KeyError
             user = request.user
-            collaborator_list = []  # empty coll  list is formed where data is input is converted to id
-            try:
-                # for loop is used for the getting label input and coll input ids
-                data["label"] = [Label.objects.filter(user_id=user.id, name=name).values()[0]['id'] for name in
+            collaborator_list = []
+            data["label"] = [Label.objects.filter(user_id=user.id, name=name).values()[0]['id'] for name in
                                  data["label"]]
-            except KeyError:
-                logger.debug('label was not added by the user %s', user)
-                pass
-            try:
-                collaborator = data['collaborators']
-                # for loop is used for the getting label input and coll input ids
-                for email in collaborator:
-                    email_id = User.objects.filter(email=email)
-                    user_id = email_id.values()[0]['id']
-                    collaborator_list.append(user_id)
-                data['collaborators'] = collaborator_list
-                print(data['collaborators'])
-            except KeyError:
-                logger.debug('collaborator was not added by the user %s', user)
-                pass
+        except KeyError:
+            logger.debug('label was not added by the user %s', user)
+            pass
+            collaborator = data['collaborators']
+            for email in collaborator:
+                email_id = User.objects.filter(email=email)
+                user_id = email_id.values()[0]['id']
+                collaborator_list.append(user_id)
+            data['collaborators'] = collaborator_list
+        except KeyError:
+            logger.debug('collaborator was not added by the user %s', user)
+            pass
             serializer = NotesSerializer(data=data, partial=True)
             if serializer.is_valid():
                 note_create = serializer.save(user_id=user.id)
@@ -477,21 +472,16 @@ class Celery(GenericAPIView):
         end = timezone.now() + timedelta(minutes=1)
         try:
             for i in range(len(reminder)):
-                print("gsagsgfsgf")
                 if start < reminder.values()[i]["reminder"] < end:
                     user_id = reminder.values()[i]['user_id']
                     user = User.objects.get(id=user_id)
                     subject = 'Reminder Note'
                     html_message = render_to_string('mailfrom.html', {'context': 'values'})
                     plain_message = strip_tags(html_message)
-                    from_email = EMAIL_HOST_USER
-                    print("before mail")
-                    to = MY_MAIL
-                    print("after mail")
-                    mail.send_mail(subject, plain_message, from_email, [to], html_message=html_message)
+                    mail.send_mail(subject, plain_message, EMAIL_HOST_USER, [MY_MAIL], html_message=html_message)
                     response = {"success": True, "message": "mail successfully sent!.........", "data": []}
                     logger.info("email sent %s ", request.user)
-            return HttpResponse('successs')
+            return HttpResponse(json.dumps((response),status=200))
         except Exception as e:
             logger.info("exception %s" ,str(e))
             return HttpResponse(json.dumps(self.response))

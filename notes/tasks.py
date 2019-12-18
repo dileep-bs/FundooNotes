@@ -1,6 +1,6 @@
 import requests
 from celery.task import task
-from .fundoonotes.settings import user_url
+from fundoonotes.settings import user_url
 
 
 @task()
