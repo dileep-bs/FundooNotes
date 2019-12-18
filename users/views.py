@@ -68,56 +68,51 @@ class register(GenericAPIView):
         """
         try:
             username = request.data['username']
-            password = request.data['password']
             email = request.data['email']
-            smd = {'success': False, 'message': "reg failed", 'data': []}
-            if User.objects.filter(email=email).exists():
-                smd['message'] = 'Email is already registered'
+            password = request.data['password']
+            smd = { 'success': False, 'message': "Not registered yet",'data': [],}
+            if username == "" or email == "" or password == "":
+                smd['message'] = "one of the details missing"
+                logger.error("one of the details missing logging in")
                 return HttpResponse(json.dumps(smd), status=400)
-            try:
-                user = User.objects.create_user(username=username, password=password, email=email, is_active=False)
-                assert isinstance(user, object)
-                payload = {'username': user.username, 'email': user.email}
-                key = obj.encode_token(payload)
-                short =obj.short_url(key)
-                mail_subject = 'Link to activate the account'
-                mail_message = render_to_string('activate.html',
-                                                {'user': user.username,
-                                                 'domain': get_current_site(request).domain,
-                                                 'token': short[2],})
-                recipient_email = [EMAIL_HOST_USER]
-                email = EmailMessage(mail_subject, mail_message, to=[recipient_email])
-                email.send()
-                smd = {'success': False, 'message': "Check your mail for activate", 'data': [key]}
-                return HttpResponse(json.dumps(smd), status=201)
-            except Exception:
-                smd["message"] = "username already taken"
+
+            elif User.objects.filter(email=email).exists():
+                smd['message'] = "email address is already registered "
+                logger.error("email address is already registered  while logging in")
                 return HttpResponse(json.dumps(smd), status=400)
+
+            elif User.objects.filter(username=username).exists():
+                smd['message'] = "username is already registered "
+                logger.error("username is already registered  while logging in")
+                return HttpResponse(json.dumps(smd), status=400)
+            else:
+                user = User.objects.create_user(username=username, email=email, password=password, is_active=True)
+                user.save()
+                if user is not None:
+                    payload = {'username': user.username, 'email': user.email}
+                    key = obj.encode_token(payload)
+                    short = obj.short_url(key)
+                    mail_subject = "Activate your account by clicking below link"
+                    mail_message = render_to_string('activate.html', {
+                        'user': user.username,
+                        'domain': get_current_site(request).domain,
+                        'u_token': short[2]
+                    })
+                    send_mail(mail_subject, mail_message, EMAIL_HOST_USER, [email])
+                    smd = {
+                        'success': True,
+                        'message': 'please check the mail and click on the link  for validation',
+                        'data': [],
+                    }
+                    return HttpResponse(json.dumps(smd), status=201)
+        except ValueError as e:
+            smd["message"] = "username data not sufficient"
+            return HttpResponse(json.dumps(smd), status=400)
         except Exception as e:
-            smd["message"] = str(e)
+            smd["message"] = "username already taken"
+            logger.error("error: %s while loging in ", str(e))
             return HttpResponse(json.dumps(smd), status=400)
 
-
-def activate(request, token):
-    try:
-        tokenobj = ShortURL.objects.get(surl=token)
-        token = tokenobj.lurl
-        user_details = jwt.decode(token, 'secret', algorithms='HS256')
-        user_name = user_details['username']
-        try:
-            user = User.objects.get(username=user_name)
-        except ObjectDoesNotExist as e:
-            print(e)
-        if user is not None:
-            user.is_active = True
-            user.save()
-            messages.info(request, "account is active now")
-            return redirect('/login')
-        else:
-            return redirect('register')
-    except KeyError:
-        messages.info(request, 'mail sending failed')
-        return redirect('/register')
 
 
 class sendmail(GenericAPIView):
@@ -157,25 +152,20 @@ class sendmail(GenericAPIView):
             return HttpResponse(json.dumps(smd), status=400)
 
 
-def activate(request, tkn):
-    """
-        :param request: request is made by the used
-        :param token:  token is fetched from url
-        :return: will register the account
-    """
+def activate(request, token2):
     try:
-        username = obj.decode_tok(tkn)
+        username = obj.decode_tok(token2)
         user = User.objects.get(username=username)
         if user is not None:
             user.is_active = True
             user.save()
-            messages.info(request, "your account is actived")
-            return redirect('/login')
+            logger.info(request, "your account is activated")
+            return redirect('login')
         else:
             return redirect('register')
     except KeyError:
-        messages.info(request, 'mail sending failed')
-        return redirect('/register')
+        messages.info(request, 'Email sending failed')
+        return redirect('register')
 
 
 def verify(request, token1):
@@ -188,7 +178,7 @@ def verify(request, token1):
             logger.info("Invalid user")
             return redirect('register')
     except Exception as e:
-        print(str(e))
+        logger.info("User credential missing",str(e))
         return redirect('resetpassword')
 
 
@@ -214,7 +204,7 @@ class resetpassword(GenericAPIView):
                     user = User.objects.get(username=username)
                     user.set_password(password)
                     user.save()
-                    messages.info(request, "password reset successfully")
+                    logger.info(request, "password reset successfully")
                     return redirect("login")
             except ObjectDoesNotExist as e:
                 smd = {"success": False, "message": "somethong went wrong", "data": []}
@@ -248,10 +238,8 @@ class SendEmail(GenericAPIView):
         smd = {"success": False, "message": "Email sending fail", "data": []}
         emailid = request.data["email"]
         user1 = request.user
-        print(user1)
         try:
             user = User.objects.get(email=emailid)
-            print(user)
             if user is not None:
                 payload = {
                     'username': user.username,
@@ -273,7 +261,7 @@ class SendEmail(GenericAPIView):
                 msg.send()
                 response_result = {
                     'success': True,
-                    'message': "check your mail for reset",
+                    'message': "check your mail for reset your password",
                     'data': []
                 }
                 return HttpResponse(json.dumps(response_result), status=201)
