@@ -9,6 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMessage, send_mail
 from django.http import HttpResponse, request
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from django_short_url.models import ShortURL
 from django_short_url.views import get_surl
 from rest_framework.generics import GenericAPIView
@@ -18,7 +19,10 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from fundoonotes.settings import file_handler
 from utility import Crypto
+from utility import Response
+
 obj=Crypto()
+obj1=Response()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(file_handler)
@@ -28,8 +32,12 @@ class login(GenericAPIView):
 
     def post(self, request):
         """
-        param APIView: user request is made from the user
-        return: will check the credentials and will user
+        :param APIView:
+        --------------
+                        user request is made from the user
+        :return:
+        --------
+                    will check the credentials and will user
         """
         try:
             username = request.data['username']
@@ -138,7 +146,7 @@ class sendmail(GenericAPIView):
                 mail_subject = "Reset your password by clicking below link"
                 mail_message = render_to_string('verify.html', {'user': user.username,
                                                                 'domain': get_current_site(request).domain,
-                                                                'token': short[2]})
+                                                                'u_token': short[2]})
                 send_mail(mail_subject, mail_message, EMAIL_HOST_USER, [emailid])
                 smd = {'success': True, 'message': "check your mail for reset", 'data': []}
                 return HttpResponse(json.dumps(smd), status=201)
@@ -175,15 +183,13 @@ def verify(request, token1):
         username=obj.decode_tok(token1)
         user = User.objects.get(username=username)
         if user is not None:
-            # return redirect(reversed('resetmail' + str(token1) + '/'))
-            return HttpResponseRedirect(reverse('url_name'))
-            # return redirect('/api/resetpassword/' + str(token1) + '/') # Reverse URL
+            return redirect(reverse('resetpassword',args={'tok':token1}))
         else:
-            messages.info("Invalid user")
+            logger.info("Invalid user")
             return redirect('register')
     except Exception as e:
         print(str(e))
-        return redirect('resetmail')
+        return redirect('resetpassword')
 
 
 class resetpassword(GenericAPIView):

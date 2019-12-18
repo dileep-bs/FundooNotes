@@ -37,10 +37,8 @@ class Crypto:
         return token
 
     def decode_tok(self, token2):
-        print("inside decode")
         tokenobj = ShortURL.objects.get(surl=token2)
         tokens = tokenobj.lurl
-        print(tokens)
         user_details = jwt.decode(tokens, self.__secret, self.__algo)
         username = user_details['username']
         return username
