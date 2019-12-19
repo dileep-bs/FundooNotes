@@ -9,5 +9,5 @@ urlpatterns = [
     path('', schema_view),
     url('api/', include('users.urls')),
     url('api/', include('notes.urls')),
-    path('sociallogin/', include('sociallogin.urls')),
+    url('api/', include('sociallogin.urls')),
 ]

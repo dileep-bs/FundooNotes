@@ -18,17 +18,6 @@ def index(request):
 def page(request):
     return render(request, 'page.html')
 
-# class Viewdata(GenericAPIView):
-#     serializer_class = Create_NotesSerializer
-#
-#     def get_queryset(self):
-#         return
-#
-#     def get(self, request):
-#         notes = Create_Notes.objects.all()
-#         serializer = Create_NotesSerializer(notes, many=True)
-#         return Response(serializer.data,status=200)
-#
 
 class NoteShare(GenericAPIView):
 

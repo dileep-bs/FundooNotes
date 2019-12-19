@@ -1,31 +1,25 @@
 import jwt
 from django.conf import settings
-from django.contrib.auth.models import User
-# from django_short_url.models import ShortURL
 from django_short_url.models import ShortURL
 from django_short_url.views import get_surl
 
 
-def smd_response(self, success, message, data):
-    response = {"success": "", "message": "", "data": "", 'success': success, 'message': message, 'data': data}
-    return response
-
-
 class Response:
+    def __init__(self,  __success="success", __message="message",__data="data"):
+            self.__success = __success
+            self.__message = __message
+            self.__data = __data
 
-    def __init__(self):
-        # Headers modification
-        pass
-
-    def json_response(self, json):
-        # JSON Response
-        pass
+    def jsonResponse(self, success, message,data):
+        if success:
+            smd={self.__success : success, self.__message: message, self.__data : data}
+            return smd
+        else:
+            smd= {self.__success: success, self.__message: message, self.__data: data}
+            return smd
 
 
 class Crypto:
-    __algo = 'HS256'
-    __secret = settings.SECRET_KEY
-
     def __init__(self, *args, **kwargs):
         self.__algo = 'HS256'
         self.__secret = settings.SECRET_KEY
@@ -37,7 +31,6 @@ class Crypto:
         return token
 
     def decode_tok(self, token2):
-        print(token2,'kkkkkkkkkkkkkkkkkkkk')
         tokenobj = ShortURL.objects.get(surl=token2)
         tokens = tokenobj.lurl
         user_details = jwt.decode(tokens, self.__secret, self.__algo)
