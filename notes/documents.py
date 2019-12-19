@@ -8,9 +8,10 @@ from .models import Notes
 
 html_strip = analyzer(
     'html_strip',
-    tokenizer=tokenizer('whitespace',min_gram=1, max_gram=1),
+    tokenizer=tokenizer('Standard', 'nGram', min_gram=1, max_gram=1),
     filter=["lowercase", "stop", "snowball"]
 )
+
 
 
 @registry.register_document
