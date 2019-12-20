@@ -266,9 +266,9 @@ class SendEmail(GenericAPIView):
                 return HttpResponse(json.dumps(res), status=201)
         except User.DoesNotExist:
             res = obj1.jsonResponse(False, 'Please enter valid Email ID', '')
-            logger.info("Invalid Email Entered", )
+            logger.info("Invalid Email Entered ", )
             return HttpResponse(json.dumps(res), status=400)
         except Exception as e:
             res = obj1.jsonResponse(False, 'something went wrong', '')
-            logger.info("Something went wrong", str(e))
+            logger.info("Something went wrong")
             return HttpResponse(json.dumps(res), status=400)

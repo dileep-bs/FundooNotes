@@ -6,12 +6,11 @@ from django_elasticsearch_dsl.registries import registry
 from elasticsearch_dsl import analyzer, tokenizer
 from .models import Notes
 
-html_strip = analyzer(
-    'html_strip',
-    tokenizer=tokenizer('Standard', 'nGram', min_gram=1, max_gram=1),
-    filter=["lowercase", "stop", "snowball"]
-)
 
+html_strip = analyzer('html_strip',
+                      tokenizer=tokenizer('standard','nGram',min_gram=1, max_gram=1),
+                      filter=["standard", "lowercase", "stop", "snowball"],
+                      )
 
 
 @registry.register_document

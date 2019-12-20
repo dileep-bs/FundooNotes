@@ -8,11 +8,9 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
 from notes.serializer import UploadSerializer
-# from notes.decorators import login_decorator
 from notes.models import Notes
 from notes.serializer import NotesSerializer
 from fundoonotes.settings import file_handler
@@ -21,7 +19,6 @@ from notes.models import Label
 from notes.serializer import LabelSerializer
 from notes.serializer import UpdateSerializer
 from .decorators import login_decorator
-# from .documents import Document
 from .documents import Document
 from .lib.s3_file import UploadImage
 from django.core import mail
@@ -30,6 +27,7 @@ from django.utils.html import strip_tags
 from .serializer import NoteDocSerializer
 from fundoonotes.settings import MY_MAIL
 from utility import Response
+
 obj1=Response()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -59,12 +57,15 @@ class NoteData(GenericAPIView):
 
     def post(self, request):
         """
-             Summary:
+             :Summary:
+             ---------
                  New note will be create by the User.
-             Exception:
+             :Exception:
+             ------------
                  KeyError: object
 
-             Returns:
+             :Returns:
+             ---------
                  response: SMD format of note create message or with error message
         """
         user = request.user
@@ -126,9 +127,11 @@ class NoteData(GenericAPIView):
 
     def get(self, request):
         """
-        Summary:
+        :Summary:
+        ----------
             Note class will let authorized user to create and get notes.
-        Methods:
+        :Methods:
+        ---------
             get: User will get all the notes.
             """
         notes_list = Notes.objects.all()
@@ -153,9 +156,11 @@ class NoteUpdate(GenericAPIView):
 
     def put(request, note_id):
         """
-        Summary:
+        :Summary:
+        --------
              Update Note attributes using pirticuler Note_ID
-        Methods:
+        :Methods:
+        ---------
             put: User will able to update existing note.
             delete: User will able to delete  note.
 
@@ -223,11 +228,14 @@ class NoteUpdate(GenericAPIView):
 
     def delete(self, request, note_id, *args, **kwargs):
         '''
-            Summary:
+            :Summary:
+            --------
                 note will be deleted by the User.
-            Exception:
+            :Exception:
+            -----------
                 Exception:  if anything goes wrong.
-            Returns:
+            :Returns:
+            ------------
                 response:  User will able to delete note or error msg if something goes wrong
         '''
         user = request.user
@@ -254,9 +262,11 @@ class LabelsCreate(GenericAPIView):
 
     def get(self, request):
         """Getting all the labels present in user database
-        Summary:
+        :Summary:
+        ---------
              Label create class will let authorized user to get and create label.
-        Methods:
+        :Methods:
+        ---------
             get: User will get all the created labels by the  user.
             post: User will able to create more labels.
         """
@@ -272,11 +282,14 @@ class LabelsCreate(GenericAPIView):
 
     def post(self, request):
         """
-            Summary:
+            :Summary:
+            ---------
                 label will be create by the User.
-            Exception:
+            :Exception:
+            ----------
                 Exception:  if anything goes wrong.
-            Method:
+            :Method:
+            ----------
                  post: User will able to create more labels.
         """
         user = request.user
@@ -304,9 +317,11 @@ class LabelsUpdate(GenericAPIView):
 
     def put(self, request, label_id):
         """
-         Summary:
+        :Summary:
+        ---------
             Update Label using pirticuler Label_ID
-       Methods:
+         :Methods:
+         -------
            put: User will be able to update all notes.
         """
         user = request.user
@@ -326,11 +341,14 @@ class LabelsUpdate(GenericAPIView):
 
     def delete(self, request, label_id):
         """
-        Summary:
+        :Summary:
+        ---------
               Deleteing pirticuler label using Label_ID
-          Exception:
+        :Exception:
+        ----------
               Exception object
-          Returns:
+        :Returns:
+        ---------
               response: will return SMD format of deleted Label
         """
         user = request.user
@@ -351,9 +369,11 @@ class LabelsUpdate(GenericAPIView):
 class Archive(GenericAPIView):
     def get(self, request):
         """
-        Summary:
+        :Summary:
+        ---------
             Archive class will let authorized user to get archive notes.
-        Methods:
+        :Methods:
+        ---------
             get: User will be able to get all archive notes.
         """
         user = request.user
@@ -379,9 +399,11 @@ class Archive(GenericAPIView):
 class Trash(GenericAPIView):
     def get(self, request):
         """
-        Summary:
+        :Summary:
+        ----------
             Getting all the Deleted notes present in user database
-        Methods:
+        :Methods:
+        ---------
             get: User will be able to get all trashed notes.
         """
         user = request.user
@@ -407,9 +429,11 @@ class Trash(GenericAPIView):
 class Remider(GenericAPIView):
     def get(self, request):
         """
-        Summary:
+        :Summary:
+        ----------
             Getting all the Redminded notes present in user database
-        Methods:
+        :Methods:
+        ----------
             get: User will be able to get all reminder notes with fired and upcoming reminder.
                 for upcoming reminder email will be set to user email address.
         """
@@ -444,9 +468,11 @@ class Celery(GenericAPIView):
 
     def get(self, request):
         """
-        Summary:
+        :Summary:
+        ---------
             Celery class works on clery beat and every 1 min this end point is hit.
-        Methods:
+        :Methods:
+        ---------
             get: this method where logic is written for triggering reminders notification service where
                email is sent if reminder time matched with current time.
         """
@@ -476,14 +502,14 @@ class Searchnotes(GenericAPIView):
 
     def post(self, request):
         """Elastic search for a notes,title..etc"""
-        response = {"success": False, "message": "bad req", "data": []}
+        user=request.user
         try:
-            find = request.data['title']
-            res = Document.search().query({
+            word = request.data['title']
+            findresult = Document.search().query({
                 "bool": {
                     "must": [
                         {"multi_match": {
-                            "query": find,
+                            "query": word,
                             "fields": ['title']
                         }},
                     ],
@@ -492,8 +518,9 @@ class Searchnotes(GenericAPIView):
                     ]
                 }
             })
-            result = NotesSerializer(res.to_queryset(), many=True)
+            result = NotesSerializer(findresult.to_queryset(), many=True)
             return HttpResponse(json.dumps(result.data, indent=2), status=200)
-        except Exception as e:
-            logger.error("error occurs", str(e))
-            return HttpResponse(json.dumps(response, indent=2), status=400)
+        except Exception:
+            logger.error("Couldn't make search operation for user %s  ",user)
+            res = obj1.jsonResponse(False, 'Something went wrong ', '')
+            return HttpResponse(json.dumps(res,indent=2), status=400)
