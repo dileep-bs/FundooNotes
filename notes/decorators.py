@@ -56,6 +56,7 @@ def login_decorator(function):
                     logger.error("token decode user id doesnt exist")
                     response["message"] = str(e)
                     return HttpResponse(json.dumps(response, indent=2), status=404)
+
         except KeyError:
             pass
 

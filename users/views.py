@@ -1,5 +1,7 @@
 import json
 import logging
+
+import requests
 from django.conf.global_settings import EMAIL_HOST_USER
 from django.contrib import messages
 from django.contrib.auth.models import User, auth
@@ -13,9 +15,11 @@ from .serializer import LoginSerializer, ResetSerializer, UserSerializer, Forgot
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from fundoonotes.settings import file_handler
+from fundoonotes.settings import file_handler, AUTH_ENDPOINT
 from utility import Crypto
 from utility import Response
+
+
 
 obj = Crypto()
 obj1 = Response()
@@ -43,8 +47,9 @@ class Login(GenericAPIView):
             user = auth.authenticate(username=username, password=password)
             print(user)
             if user is not None:
-                obj.encode_token(payload)
-                res = obj1.jsonResponse(True, 'Login success','')
+                login_token=requests.post(AUTH_ENDPOINT,data=payload)
+                # login_token=obj.encode_token(payload)
+                res = obj1.jsonResponse(True, 'Login success',login_token)
                 return HttpResponse(json.dumps(res), status=200)
             else:
                 res = obj1.jsonResponse(False, 'Check your password and username','')

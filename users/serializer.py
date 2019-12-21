@@ -1,5 +1,7 @@
-from rest_framework import serializers
+from rest_framework import serializers, status
 from django.contrib.auth.models import User
+from rest_framework.response import Response
+from rest_framework_jwt.utils import jwt_response_payload_handler
 
 
 class LoginSerializer(serializers.ModelSerializer):
@@ -30,3 +32,4 @@ class ForgotSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['email']
+
