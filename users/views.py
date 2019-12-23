@@ -48,7 +48,6 @@ class Login(GenericAPIView):
             print(user)
             if user is not None:
                 login_token=requests.post(AUTH_ENDPOINT,data=payload)
-                # login_token=obj.encode_token(payload)
                 res = obj1.jsonResponse(True, 'Login success',login_token)
                 return HttpResponse(json.dumps(res), status=200)
             else:

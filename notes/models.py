@@ -2,7 +2,6 @@ from django.contrib.auth.models import User, AbstractUser
 from django.db import models
 
 
-# Create your models here.
 class Media(models.Model):
     file = models.URLField(max_length=250)
 
@@ -13,11 +12,6 @@ class Data(models.Model):
     filename = models.CharField(max_length=60)
 
 
-from django.contrib.auth.models import User, AbstractUser
-from django.db import models
-
-
-# Create your models here.
 class Label(models.Model):
     name = models.CharField("name of label", max_length=254)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='label_user', default="admin")
