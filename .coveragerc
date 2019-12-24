@@ -1,0 +1,7 @@
+[run]
+branch = true
+omit = ../**/migrations/*, */settings/*, */wsgi.py, manage.py, venv/*
+include= /note/url.py, /user/url.py, /user/url.py, /user/url.py, /user/url.py
+source = .
+[report]
+show_missing = false

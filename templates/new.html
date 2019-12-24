@@ -1,0 +1,33 @@
+{% autoescape off %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>login</title>
+</head>
+<body>
+
+  <div class="form">
+<form class="login" action="login" method="post">
+         <u><h1>Reset your Password</h1></u><br><br><br><br>
+
+        <p>You recently requested to reset your password for your account.<strong>Click on the Button</strong> to reset it.
+            <strong>Please click the button to reset your password.</strong></p><br><br>
+<button><a href="http://{{ domain }}{%  url 'verify' token1=user_token %}" class="button" >Click Here</a></button>
+    </form>
+<br>
+<style>
+    .form {
+  position: relative;
+  margin-top: 300px;
+  background: white;
+  max-hight:450px;
+  max-width: 750px;
+  margin: 210px auto 50px;
+  padding:10px;
+  text-align: center;
+}
+</style>
+  </div>
+</body>
+{% endautoescape %}

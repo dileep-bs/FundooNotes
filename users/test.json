@@ -1,0 +1,12 @@
+[{
+  "Test_case1":{
+    "username": "dileep",
+    "email": "dileep.bs@yhaoo.com",
+    "password": "1213"
+  },
+   "Test_case2": {
+     "username": "dileep",
+     "password": "1213"
+   }
+}
+]
