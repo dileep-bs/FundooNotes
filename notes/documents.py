@@ -7,10 +7,11 @@ from elasticsearch_dsl import analyzer, tokenizer
 from .models import Notes
 
 
-html_strip = analyzer('html_strip',
-                      tokenizer=tokenizer('standard','nGram',min_gram=1, max_gram=1),
-                      filter=["standard", "lowercase", "stop", "snowball"],
-                      )
+html_strip = analyzer(
+    'html_strip',
+    tokenizer=tokenizer('trigram', 'nGram', min_gram=3, max_gram=3),
+    filter=["lowercase", "stop", "snowball"]
+)
 
 
 @registry.register_document

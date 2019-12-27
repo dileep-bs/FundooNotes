@@ -1,16 +1,16 @@
-# getting base image ubantu
 FROM python:3.6
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /usr/src/app
-COPY requirements.txt ./
-RUN pip install --upgrade pip
+ENV PYTHONDONTWRITEBYCODE 1
+ENV PYTHONUNBUFFERED 1
+ENV DEBIAN_FRONTEND noninteractive
+RUN apt-get update && \
+    apt-get -y install gcc mono-mcs && \
+    rm -rf /var/lib/apt/lists/* build-essential libssl-dev python3-dev python3-pip
+RUN mkdir /fundoonotes
+WORKDIR /fundoonotes
+COPY requirements.txt /fundoonotes/
 RUN pip install -r requirements.txt
-COPY . .
-
-EXPOSE 8000
-CMD ["python3", "manage.py", "runserver", "127.0.0.1:8000"]
+#RUN apt-get update
+#RUN apt-get install build-essential libssl-dev libffi-dev python3-dev -y
+#RUN apt-get install python3-pip -y
+COPY . ./
+CMD ["python","manage.py","runserver","0.0.0.0:8000"]

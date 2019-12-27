@@ -118,12 +118,12 @@ class NoteData(GenericAPIView):
             print(e)
             logger.error("got %s error for creating note as no data was provided for user %s", str(e), user)
             res = obj1.jsonResponse(False, 'One of field is missing', '')
-            return Response(res, status=400)
+            return Response(res)
         except Exception as e:
             print(e)
             logger.error("got %s error for creating note for user %s", str(e), user)
             res = obj1.jsonResponse(False, 'Something went wrong', '')
-            return Response(res, status=400)
+            return Response(res)
 
     def get(self, request):
         """
