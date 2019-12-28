@@ -24,7 +24,6 @@ def redirect_after_login(function):
             logger.info("you're already loggedin ")
             return redirect("/api/note")
         return function(request, *args, **kwargs)
-
     return wrapper
 
 
@@ -100,7 +99,6 @@ def validate_collab_put(function):
 def labelvalidator(label, user_id):
     lab = []
     try:
-        # pdb.set_trace()
         ll = Label.objects.filter(user_id=user_id)
         for i in range(len(label)):
             get_object_or_404(Label, name=label[i], user_id=user_id)
