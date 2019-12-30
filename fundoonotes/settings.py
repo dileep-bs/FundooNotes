@@ -109,7 +109,7 @@ DATABASES = {
         'NAME': 'fundoonotes',
         'USER': 'newuser',
         'PASSWORD': os.getenv('PASSWORD'),
-        'HOST': 'db',
+        'HOST': 'localhost',
         'PORT': '3306'
 
     }
