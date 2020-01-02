@@ -72,27 +72,22 @@ class NoteData(GenericAPIView):
         """
         user = request.user
         try:
+
             data = request.data
             if len(data) == 0:
                 raise KeyError
             user = request.user
             collaborator_list = []
-            try:
-                data["label"] = [Label.objects.filter(user_id=user.id, name=name).values()[0]['id'] for name in
-                                 data["label"]]
-            except KeyError:
-                logger.debug('label was not added by the user %s', user)
-                pass
-            try:
-                collaborator = data['collaborators']
-                for email in collaborator:
-                    email_id = User.objects.filter(email=email)
-                    user_id = email_id.values()[0]['id']
-                    collaborator_list.append(user_id)
-                data['collaborators'] = collaborator_list
-            except KeyError:
-                logger.debug('collaborator was not added by the user %s', user)
-                pass
+            data["label"] = [Label.objects.filter(user_id=user.id, name=name).values()[0]['id'] for name in    data["label"]]
+            collaborator = data['collaborators']
+            for email in collaborator:
+                email_id = User.objects.filter(email=email)
+                user_id = email_id.values()[0]['id']
+                collaborator_list.append(user_id)
+            data['collaborators'] = collaborator_list
+        except KeyError:
+            logger.debug('collaborator was not added by the user %s', user)
+            pass
             serializer = NotesSerializer(data=data, partial=True)
             if serializer.is_valid():
                 note_create = serializer.save(user_id=user.id)
@@ -119,13 +114,13 @@ class NoteData(GenericAPIView):
         except KeyError as e:
             print(e)
             logger.error("got %s error for creating note as no data was provided for user %s", str(e), user)
-            response = {'success': False, 'message': "one of the field is empty ", 'data': []}
-            return Response(response, status=400)
+            res = {'success': False, 'message': "one of the field is empty ", 'data': []}
+            return HttpResponse(json.dumps(res, indent=2), status=400)
         except Exception as e:
             print(e)
             logger.error("got %s error for creating note for user %s", str(e), user)
-            response = {'success': False, 'message': "something went wrong", 'data': []}
-            return Response(response, status=400)
+            res = {'success': False, 'message': "something went wrong", 'data': []}
+            return HttpResponse(json.dumps(res, indent=2), status=400)
 
     def get(self, request):
         """
@@ -222,11 +217,11 @@ class NoteUpdate(GenericAPIView):
         except KeyError as e:
             logger.error("no data was provided from user %s to update", str(e), user)
             res = obj1.jsonResponse(False, 'note already upto data ', '')
-            return Response(res, status=400)
+            return HttpResponse(json.dumps(res, indent=2), status=400)
         except Exception as e:
             logger.error("got error :%s for user :%s while updating note id :%s", str(e), user, note_id)
             res = obj1.jsonResponse(False, 'Something went wrong ', '')
-            return Response(res, status=404)
+            return HttpResponse(json.dumps(res, indent=2), status=400)
 
     def delete(self, request, note_id, *args, **kwargs):
         '''
