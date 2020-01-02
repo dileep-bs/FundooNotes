@@ -269,7 +269,7 @@ class SendEmail(GenericAPIView):
                 msg = EmailMultiAlternatives(mail_subject, tepm, emailid, [emailid])
                 msg.attach_alternative(mail_message, "text/html")
                 msg.send()
-                res = obj1.jsonResponse(True, 'Check yout Email', '')
+                res = obj1.jsonResponse(True, 'Check your Email', '')
                 return HttpResponse(json.dumps(res), status=201)
         except User.DoesNotExist:
             res = obj1.jsonResponse(False, 'Please enter valid Email ID', '')

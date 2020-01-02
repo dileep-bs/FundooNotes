@@ -2,10 +2,8 @@ from elasticsearch_dsl import connections
 
 connections.create_connection(hosts=['localhost'], timeout=20)
 from django_elasticsearch_dsl import Document, fields
-from django_elasticsearch_dsl.registries import registry
 from elasticsearch_dsl import analyzer, tokenizer
 from .models import Notes
-
 
 html_strip = analyzer(
     'html_strip',
@@ -14,7 +12,6 @@ html_strip = analyzer(
 )
 
 
-@registry.register_document
 class Document(Document):
     note = fields.TextField(analyzer=html_strip)
     title = fields.TextField(analyzer=html_strip)

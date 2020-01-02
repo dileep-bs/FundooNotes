@@ -64,7 +64,7 @@ def login_decorator(function):
             response = {"success": False, "message":  "something went wrong please login again", 'data': []}
             return HttpResponse(json.dumps(response, indent=2), status=404)
         else:
-            logger.info("%s logged in using social login ", request.user)
+            logger.info("%s logged in using social login", request.user)
             return function(request, *args, **kwargs)
 
     return wrapper
