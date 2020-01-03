@@ -72,26 +72,22 @@ class NoteData(GenericAPIView):
         """
         user = request.user
         try:
-
             data = request.data
-            if len(data) == 0:
-                raise KeyError
             user = request.user
             collaborator_list = []
-            data["label"] = [Label.objects.filter(user_id=user.id, name=name).values()[0]['id'] for name in    data["label"]]
+            data["label"] = [Label.objects.filter(user_id=user.id, name=name).values()[0]['id'] for name in
+                             data["label"]]
             collaborator = data['collaborators']
             for email in collaborator:
                 email_id = User.objects.filter(email=email)
                 user_id = email_id.values()[0]['id']
                 collaborator_list.append(user_id)
+                # print(collaborator_list)
             data['collaborators'] = collaborator_list
-        except KeyError:
-            logger.debug('collaborator was not added by the user %s', user)
-            pass
             serializer = NotesSerializer(data=data, partial=True)
             if serializer.is_valid():
                 note_create = serializer.save(user_id=user.id)
-                response = {'success': True, 'message': "note created", 'data': []}
+                response = obj1.jsonRespone(True, 'Note created successfull', '')
                 if serializer.data['is_archive']:
                     red.hmset(str(user.id) + "is_archive",
                               {note_create.id: str(json.dumps(serializer.data))})  # created note is cached in redis
@@ -105,21 +101,19 @@ class NoteData(GenericAPIView):
                                                                    "reminder": serializer.data["reminder"]}))})
                     red.hmset(str(user.id) + "note",
                               {note_create.id: str(json.dumps(serializer.data))})
-
                     logger.info("note is created for %s with note data as %s", user, note_create.__repr__())
                     return HttpResponse(json.dumps(response, indent=2), status=201)
             logger.error(" %s for  %s", user, serializer.errors)
-            response = {'success': False, 'message': "note was not created", 'data': []}
-            return HttpResponse(json.dumps(response, indent=2), status=400)
+            res = obj1.jsonResponse(False, 'Something went wrong ', '')
+            return HttpResponse(json.dumps(res, indent=2), status=400)
         except KeyError as e:
             print(e)
             logger.error("got %s error for creating note as no data was provided for user %s", str(e), user)
-            res = {'success': False, 'message': "one of the field is empty ", 'data': []}
+            res = obj1.jsonResponse(False, 'one of feild is empty', '')
             return HttpResponse(json.dumps(res, indent=2), status=400)
         except Exception as e:
-            print(e)
             logger.error("got %s error for creating note for user %s", str(e), user)
-            res = {'success': False, 'message': "something went wrong", 'data': []}
+            res = obj1.jsonResponse(False, 'Something went wrong ', '')
             return HttpResponse(json.dumps(res, indent=2), status=400)
 
     def get(self, request):
@@ -151,7 +145,7 @@ class NoteData(GenericAPIView):
 class NoteUpdate(GenericAPIView):
     serializer_class = UpdateSerializer
 
-    def put(request, note_id):
+    def put(self,request, note_id):
         """
         :Summary:
         --------
@@ -164,28 +158,19 @@ class NoteUpdate(GenericAPIView):
         """
         user = request.user
         try:
+            # import pdb
+            # pdb.set_trace()
             instance = Notes.objects.get(id=note_id)
             data = request.data
-            if len(data) == 0:
-                raise KeyError
             collaborator_list = []  # empty coll  list is formed where data is input is converted to id
-            try:
-                label = data["label"]
-                data['label'] = [Label.objects.get(name=name, user_id=request.user.id).id for name in label]
-            except KeyError:
-                logger.debug('label was not added by the user %s', user)
-                pass
-
-                collaborator = data['collaborators']
-                for email in collaborator:
-                    emails = User.objects.filter(email=email)
-                    user_id = emails.values()[0]['id']
-                    collaborator_list.append(user_id)
-                data['collaborators'] = collaborator_list
-
-            except KeyError:
-                logger.debug('collaborators was not added by the user %s', user)
-                pass
+            label = data["label"]
+            data['label'] = [Label.objects.get(name=name, user_id=request.user.id).id for name in label]
+            collaborator = data['collaborators']
+            for email in collaborator:
+                emails = User.objects.filter(email=email)
+                user_id = emails.values()[0]['id']
+                collaborator_list.append(user_id)
+            data['collaborators'] = collaborator_list
             serializer = UpdateSerializer(instance, data=data, partial=True)
             if serializer.is_valid():
                 note_create = serializer.save()
@@ -206,7 +191,6 @@ class NoteUpdate(GenericAPIView):
                                     {note_create.id: str(json.dumps({"email": user.email, "user": str(user),
                                                                      "note_id": note_create.id,
                                                                      "reminder": serializer.data["reminder"]}))})
-
                     redis.hmset(str(user.id) + "note",
                                 {note_create.id: str(json.dumps(serializer.data))})
                     logger.info("note was updated with note id :%s for user :%s ", note_id, user)
@@ -488,7 +472,7 @@ class Celery(GenericAPIView):
                     mail.send_mail(subject, plain_message, EMAIL_HOST_USER, [MY_MAIL], html_message=html_message)
                     res = obj1.jsonResponse(True, 'mail successfully sent!.........', '')
                     logger.info("email sent %s ", request.user)
-            return HttpResponse(json.dumps((res), status=200))
+            return HttpResponse(json.dumps(res, status=200))
         except Exception as e:
             logger.info("exception %s", str(e))
             res = obj1.jsonResponse(False, 'Something went wrong ', '')

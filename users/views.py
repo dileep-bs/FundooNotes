@@ -43,7 +43,6 @@ class Login(GenericAPIView):
         try:
             username = request.data['username']
             password = request.data['password']
-            # payload = {'username': username}
             user = auth.authenticate(username=username, password=password)
             # print(user)
             if user is not None:
