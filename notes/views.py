@@ -28,6 +28,7 @@ from .serializer import NoteDocSerializer
 from fundoonotes.settings import MY_MAIL
 from utility import Response
 from .lib.redis import RedisOperation
+
 red=RedisOperation()
 
 obj1=Response()
@@ -41,7 +42,6 @@ class UploadMedia(GenericAPIView):
 
     def post(self, request):
         """Upload media files to s3 bucket object"""
-
         try:
             image = request.FILES.get('file')
             clsobj = UploadImage()
@@ -49,11 +49,11 @@ class UploadMedia(GenericAPIView):
             return HttpResponse(json.dumps(response))
         except Exception as e:
             print(e)
-            response = obj1.jsonResponse(False, 'Upload Unsuccessfull', '')
+            response = obj1.jsonResponse(False, 'Upload Unsuccessfull','')
             return HttpResponse(json.dumps(response))
 
 
-# @method_decorator(login_decorator, name='dispatch')
+@method_decorator(login_decorator, name='dispatch')
 class NoteData(GenericAPIView):
     serializer_class = NotesSerializer
 
@@ -82,7 +82,6 @@ class NoteData(GenericAPIView):
                 email_id = User.objects.filter(email=email)
                 user_id = email_id.values()[0]['id']
                 collaborator_list.append(user_id)
-                # print(collaborator_list)
             data['collaborators'] = collaborator_list
             serializer = NotesSerializer(data=data, partial=True)
             if serializer.is_valid():
@@ -141,7 +140,7 @@ class NoteData(GenericAPIView):
         return render(request, 'listofnotes.html', {'notes': notes}, status=200)
 
 
-# @method_decorator(login_decorator, name='dispatch')
+@method_decorator(login_decorator, name='dispatch')
 class NoteUpdate(GenericAPIView):
     serializer_class = UpdateSerializer
 
@@ -158,8 +157,6 @@ class NoteUpdate(GenericAPIView):
         """
         user = request.user
         try:
-            # import pdb
-            # pdb.set_trace()
             instance = Notes.objects.get(id=note_id)
             data = request.data
             collaborator_list = []  # empty coll  list is formed where data is input is converted to id
@@ -506,3 +503,4 @@ class Searchnotes(GenericAPIView):
             logger.error("Couldn't make search operation for user %s  ",user)
             res = obj1.jsonResponse(False, 'Something went wrong ', '')
             return HttpResponse(json.dumps(res,indent=2), status=400)
+

@@ -7,6 +7,7 @@ schema_view = get_swagger_view(title='Fundoonotes API')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', schema_view),
+    # path('accounts/', include('allauth.urls')),
     url('api/', include('users.urls')),
     url('api/', include('notes.urls')),
     url('api/', include('sociallogin.urls')),

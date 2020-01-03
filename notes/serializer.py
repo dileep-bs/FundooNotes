@@ -15,7 +15,7 @@ class UploadSerializer(serializers.ModelSerializer):
 class NotesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notes
-        fields = ['title', 'note', 'label', 'url', 'is_archive', 'collaborators' ]
+        fields = ['title', 'note', 'label', 'url','collaborators']
 
 
 class ShareSerializer(serializers.ModelSerializer):
@@ -33,7 +33,7 @@ class LabelSerializer(serializers.ModelSerializer):
 class UpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notes
-        fields = ['title', 'note', 'label', 'url', 'is_archive', 'collaborators']
+        fields = ['title', 'note', 'label', 'url','collaborators']
 
 
 class NoteDocSerializer(serializers.ModelSerializer):
