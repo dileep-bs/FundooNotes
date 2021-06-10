@@ -28,7 +28,7 @@ decorator==4.1.2
 
 defusedxml==0.6.0
 
-Django==2.2
+Django==2.2.24
 django-admin==2.0.0
 django-allauth==0.40.0
 django-elasticsearch-dsl==7.1.0
